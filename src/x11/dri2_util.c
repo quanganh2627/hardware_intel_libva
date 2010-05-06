@@ -171,7 +171,7 @@ isDRI2Connected(VADriverContextP ctx, char **driver_name)
                      driver_name, &device_name))
         goto err_out;
 #else
-#define DRI2_DEV_NAME "/dev/dri/card0"
+#define DRI2_DEV_NAME "/dev/card0"
     device_name = malloc(sizeof(DRI2_DEV_NAME));
     strcpy(device_name, DRI2_DEV_NAME);
 #define DRI2_DRV_NAME "psb"
