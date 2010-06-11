@@ -22,11 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef IN_LIBVA
-#include <va_x11.h>
-#else
 #include <va/va_x11.h>
-#endif
 
 #include "assert.h"
 #include <stdarg.h>
@@ -80,14 +76,10 @@ int main(int argc, const char* argv[])
 
 void test_init()
 {
-#ifndef ANDROID
   dpy = XOpenDisplay(NULL);
   ASSERT( dpy );
   status("XOpenDisplay: dpy = %08x\n", dpy);
-#else
-  dpy = malloc(sizeof(Display));
-  *dpy = 0;
-#endif
+  
   va_dpy = vaGetDisplay(dpy);
   ASSERT( va_dpy );  
   status("vaGetDisplay: va_dpy = %08x\n", va_dpy);
@@ -103,13 +95,8 @@ void test_terminate()
   ASSERT( VA_STATUS_SUCCESS == va_status );
   status("vaTerminate\n");
 
-#ifndef ANDROID
   XCloseDisplay(dpy);
   status("XCloseDisplay\n");
-#else
-  free(dpy);
-  dpy = NULL;
-#endif
 
   if (profiles)
   {

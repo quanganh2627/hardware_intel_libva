@@ -47,8 +47,8 @@
 
 #include <assert.h>
 
-#include "va.h"
-#include "va_x11.h"
+#include <va/va.h>
+#include <va/va_x11.h>
 
 #define CHECK_VASTATUS(va_status,func)                                  \
 if (va_status != VA_STATUS_SUCCESS) {                                   \
@@ -156,11 +156,7 @@ int main(int argc,char **argv)
     if (argc > 1)
         putsurface=1;
  
-#ifndef ANDROID
     x11_display = XOpenDisplay(":0.0");
-#endif
-    x11_display = malloc(sizeof(Display));
-    *x11_display = 0x8c2c2c2c;
 
     if (x11_display == NULL) {
       fprintf(stderr, "Can't connect X server!\n");
@@ -264,7 +260,6 @@ int main(int argc,char **argv)
     CHECK_VASTATUS(va_status, "vaSyncSurface");
     
     if (putsurface) {
-#ifndef ANDROID
         Window  win;
         win = XCreateSimpleWindow(x11_display, RootWindow(x11_display, 0), 0, 0,
                               WIN_WIDTH,WIN_HEIGHT, 0, 0, WhitePixel(x11_display, 0));
@@ -275,7 +270,6 @@ int main(int argc,char **argv)
                                 0,0,WIN_WIDTH,WIN_HEIGHT,
                                 NULL,0,0);
         CHECK_VASTATUS(va_status, "vaPutSurface");
-#endif
     }
 
     printf("press any key to exit\n");
@@ -286,10 +280,7 @@ int main(int argc,char **argv)
     vaDestroyContext(va_dpy,context_id);
 
     vaTerminate(va_dpy);
-    free(x11_display);
-#ifndef ANDROID
     XCloseDisplay(x11_display);
-#endif
     
     return 0;
 }

@@ -22,11 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef IN_LIBVA
-#include <va_x11.h>
-#else
 #include <va/va_x11.h>
-#endif
 
 #include "assert.h"
 #include <stdarg.h>
@@ -43,12 +39,8 @@ int main(int argc, const char* argv[])
   VAStatus va_status;
   int major_version, minor_version; 
    
-#ifndef ANDROID
   dpy = XOpenDisplay(NULL);
   ASSERT( dpy );
-#else
-  dpy = 0;
-#endif
   printf("XOpenDisplay: dpy = %08x\n", dpy);
   
   va_dpy = vaGetDisplay(dpy);
@@ -71,12 +63,10 @@ int main(int argc, const char* argv[])
       {
           printf("Surface %d surface_id = %08x\n", i, surfaces[i]);
       }
-#ifndef ANDROID
       Window win = XCreateSimpleWindow(dpy, RootWindow(dpy, 0), 0, 0, 720, 480, 0, 0, WhitePixel(dpy, 0));
       printf("Window = %08x\n", win); 
       XMapWindow(dpy, win);
       XSync(dpy, False);
-#endif
       
       vaPutSurface(va_dpy, surfaces[0], win, 0, 0, 720, 480, 0, 0, 720, 480, 0); 
 

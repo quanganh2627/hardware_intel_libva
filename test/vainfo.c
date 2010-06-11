@@ -22,11 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef IN_LIBVA
-#include <va_x11.h>
-#else
 #include <va/va_x11.h>
-#endif
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -91,17 +87,12 @@ int main(int argc, const char* argv[])
   else
       name = argv[0];
 
-#ifndef ANDROID
   dpy = XOpenDisplay(":0.0");
   if (NULL == dpy)
   {
       fprintf(stderr, "%s: Error, can't open display: '%s'\n", name, display ? display : "");
       return 1;
   }
-#else
-  dpy = malloc(sizeof(Display));
-  *dpy = 0;
-#endif
   
   va_dpy = vaGetDisplay(dpy);
   if (NULL == va_dpy)
@@ -135,11 +126,6 @@ int main(int argc, const char* argv[])
   }
   
   vaTerminate(va_dpy);
-
-#ifdef ANDROID
-    free(dpy);
-    dpy = NULL;
-#endif
   
   return 0;
 }
