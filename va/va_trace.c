@@ -48,7 +48,7 @@ static unsigned int trace_slice;
 static unsigned int trace_width;
 static unsigned int trace_height;
 
-int va_TraceInit(void)
+void va_TraceInit(void)
 {
     trace_file = (const char *)getenv("LIBVA_TRACE");
     if (trace_file) {
@@ -58,7 +58,7 @@ int va_TraceInit(void)
     }
 }
 
-int va_TraceEnd(void)
+void va_TraceEnd(void)
 {
     if (trace_file && trace_fp) {
         fclose(trace_fp);
@@ -73,7 +73,7 @@ int va_TraceEnd(void)
     }
 }
 
-int va_TraceMsg(const char *msg, ...)
+void va_TraceMsg(const char *msg, ...)
 {
     va_list args;
     
@@ -87,7 +87,7 @@ int va_TraceMsg(const char *msg, ...)
 }
 
 
-int va_TraceCreateConfig(
+void va_TraceCreateConfig(
     VADisplay dpy,
     VAProfile profile, 
     VAEntrypoint entrypoint, 
@@ -110,7 +110,7 @@ int va_TraceCreateConfig(
 }
 
 
-int va_TraceCreateSurface(
+void va_TraceCreateSurface(
     VADisplay dpy,
     int width,
     int height,
@@ -131,7 +131,7 @@ int va_TraceCreateSurface(
 }
 
 
-int va_TraceCreateContext(
+void va_TraceCreateContext(
     VADisplay dpy,
     VAConfigID config_id,
     int picture_width,
@@ -721,7 +721,7 @@ static void va_TraceVASliceParameterBufferVC1(
     va_TraceMsg ("    slice_vertical_position       = %d\n", p->slice_vertical_position);
 }
 
-int va_TraceBeginPicture(
+void va_TraceBeginPicture(
     VADisplay dpy,
     VAContextID context,
     VASurfaceID render_target
@@ -978,7 +978,7 @@ static int va_TraceVC1Buf(
     return 0;
 }
 
-int va_TraceRenderPicture(
+void va_TraceRenderPicture(
     VADisplay dpy,
     VAContextID context,
     VABufferID *buffers,
@@ -1035,7 +1035,7 @@ int va_TraceRenderPicture(
 }
 
 
-int va_TraceEndPicture(
+void va_TraceEndPicture(
     VADisplay dpy,
     VAContextID context
 )
