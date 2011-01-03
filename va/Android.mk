@@ -34,6 +34,7 @@ LOCAL_COPY_HEADERS := \
 LOCAL_COPY_HEADERS_TO := libva/va
 
 LOCAL_MODULE := libva
+LOCAL_MODULE_TAGS := optional
 
 LOCAL_SHARED_LIBRARIES := libdl libdrm libcutils
 
@@ -60,6 +61,7 @@ LOCAL_COPY_HEADERS_TO := libva/va
 LOCAL_COPY_HEADERS := va_android.h		
 
 LOCAL_MODULE := libva-android
+LOCAL_MODULE_TAGS := optional
 
 LOCAL_SHARED_LIBRARIES := libva
 
@@ -88,5 +90,6 @@ LOCAL_COPY_HEADERS := \
 LOCAL_SHARED_LIBRARIES := libva
 
 LOCAL_MODULE := libva-tpi
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)

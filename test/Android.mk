@@ -15,6 +15,7 @@ LOCAL_C_INCLUDES += \
   $(TARGET_OUT_HEADERS)/libva
 
 LOCAL_MODULE := vainfo
+LOCAL_MODULE_TAGS := optional
 
 LOCAL_SHARED_LIBRARIES := libva-android libva libdl libdrm libcutils
 
