@@ -22,6 +22,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <utils/Log.h>
+#define LOG_TAG "VA"
+
 #define _GNU_SOURCE 1
 #include "va.h"
 #include "va_backend.h"
@@ -195,6 +198,12 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
     driver_dir = strtok_r((const char *)search_path, ":", &saveptr);
     while(driver_dir)
     {
+                    LOGE("%s:%s:%d",
+                    __FILE__,
+                    __func__,
+                    __LINE__);
+
+
         void *handle = NULL;
         char *driver_path = (char *) malloc( strlen(driver_dir) +
                                              strlen(driver_name) +
@@ -208,6 +217,7 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
 #ifndef ANDROID
         handle = dlopen( driver_path, RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE );
 #else
+        LOGE("ready to dlopen pvr_drv_video - name = %s", driver_path);
         handle = dlopen( driver_path, RTLD_NOW| RTLD_GLOBAL);
 #endif
         if (!handle)
@@ -220,6 +230,11 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
         }
         else
         {
+            LOGE("%s:%s:%d",
+                    __FILE__,
+                    __func__,
+                    __LINE__);
+
             VADriverInit init_func;
             init_func = (VADriverInit) dlsym(handle, DRIVER_INIT_FUNC);
             if (!init_func)
@@ -229,10 +244,24 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
             }
             else
             {
-                vaStatus = (*init_func)(ctx);
+                  LOGE("%s:%s:%d",
+                        __FILE__,
+                        __func__,
+                        __LINE__);
 
+
+                vaStatus = (*init_func)(ctx);
+                  LOGE("%s:%s:%d:%d",
+                        __FILE__,
+                        __func__,
+                        __LINE__,
+                        vaStatus);
                 if (VA_STATUS_SUCCESS == vaStatus)
                 {
+                  LOGE("%s:%s:%d",
+                        __FILE__,
+                        __func__,
+                        __LINE__);
                     CHECK_MAXIMUM(vaStatus, ctx, profiles);
                     CHECK_MAXIMUM(vaStatus, ctx, entrypoints);
                     CHECK_MAXIMUM(vaStatus, ctx, attributes);
@@ -298,7 +327,7 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
         
         driver_dir = strtok_r(NULL, ":", &saveptr);
     }
-    
+
     free(search_path);    
     
     return vaStatus;
@@ -383,6 +412,12 @@ VAStatus vaInitialize (
     int *minor_version 	 /* out */
 )
 {
+    LOGE("%s:%s:%d - dpy = %x", 
+            __FILE__,
+            __func__,
+            __LINE__,
+            dpy);
+
     const char *driver_name_env = NULL;
     char *driver_name = NULL;
     VAStatus vaStatus;
@@ -396,9 +431,12 @@ VAStatus vaInitialize (
     va_infoMessage("libva version %s\n", VA_VERSION_S);
 
     driver_name_env = getenv("LIBVA_DRIVER_NAME");
+
+
     if (driver_name_env && geteuid() == getuid())
     {
         /* Don't allow setuid apps to use LIBVA_DRIVER_NAME */
+    LOGE("%s:%s:%d - driver_name_env = %s",__FILE__,__func__,__LINE__, driver_name_env);
         driver_name = strdup(driver_name_env);
         vaStatus = VA_STATUS_SUCCESS;
         va_infoMessage("User requested driver '%s'\n", driver_name);
@@ -406,8 +444,15 @@ VAStatus vaInitialize (
     else
     {
         vaStatus = va_getDriverName(dpy, &driver_name);
+    LOGE("%s:%s:%d - driver_name = %s",__FILE__,__func__,__LINE__, driver_name);
         va_infoMessage("va_getDriverName() returns %d\n", vaStatus);
     }
+
+    LOGE("%s:%s:%d - driver name = %s, display=%x", 
+            __FILE__,
+            __func__,
+            __LINE__,
+            driver_name, (unsigned)dpy);
 
     if (VA_STATUS_SUCCESS == vaStatus)
     {
@@ -417,6 +462,13 @@ VAStatus vaInitialize (
         *major_version = VA_MAJOR_VERSION;
         *minor_version = VA_MINOR_VERSION;
     }
+
+        
+    LOGE("%s:%s:%d - driver name = %s", 
+            __FILE__,
+            __func__,
+            __LINE__,
+            driver_name);
 
     if (driver_name)
         free(driver_name);

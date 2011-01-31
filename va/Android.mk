@@ -32,11 +32,10 @@ LOCAL_COPY_HEADERS := \
 	x11/va_dricommon.h 
 
 LOCAL_COPY_HEADERS_TO := libva/va
-
-LOCAL_MODULE := libva
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libva
 
-LOCAL_SHARED_LIBRARIES := libdl libdrm libcutils
+LOCAL_SHARED_LIBRARIES := libdl libdrm libcutils libutils
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -59,11 +58,10 @@ LOCAL_C_INCLUDES += \
 LOCAL_COPY_HEADERS_TO := libva/va
 
 LOCAL_COPY_HEADERS := va_android.h		
-
-LOCAL_MODULE := libva-android
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libva-android
 
-LOCAL_SHARED_LIBRARIES := libva
+LOCAL_SHARED_LIBRARIES := libva libutils
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -88,8 +86,7 @@ LOCAL_COPY_HEADERS := \
 	va_backend_tpi.h
 
 LOCAL_SHARED_LIBRARIES := libva
-
-LOCAL_MODULE := libva-tpi
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libva-tpi
 
 include $(BUILD_SHARED_LIBRARY)

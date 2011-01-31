@@ -22,6 +22,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <utils/Log.h>
+#define LOG_TAG "VA-ANDROID"
+
 #define _GNU_SOURCE 1
 #include "va.h"
 #include "va_backend.h"
@@ -137,7 +140,7 @@ static VAStatus va_DisplayContextGetDriverName (
 
     memset(dri_state, 0, sizeof(*dri_state));
     dri_state->fd = open_device(DEVICE_NAME);
-    
+LOGE("%s:%s:%d fd=%d:Device Name=%s", __FILE__, __func__, __LINE__, dri_state->fd, DEVICE_NAME);   
     if (dri_state->fd < 0) {
         fprintf(stderr,"can't open DRM devices\n");
         return VA_STATUS_ERROR_UNKNOWN;
@@ -264,6 +267,13 @@ VADisplay vaGetDisplay (
         }
     }
   
+    LOGE("%s:%s:%d - native dispaly = %x",
+            __FILE__,
+            __func__,
+            __LINE__,
+            //*((VADisplayContextP)dpy->native_dpy));
+            *(unsigned int*)native_dpy);
+
     return dpy;
 }
 
