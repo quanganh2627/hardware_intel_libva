@@ -56,8 +56,12 @@
  * rev 0.31 (09/02/2009 Gwenole Beauchesne) - VC-1/H264 fields change for VDPAU and XvBA backend
  *                                       Application needs to relink with the new library.
  *
- * rev 0.31.1 (03/29/2009) - Data structure for JPEG encode
- *                                      
+ * rev 0.31.1 (03/29/2009)              - Data structure for JPEG encode
+ * rev 0.31.2 (01/13/2011 Anthony Pabon)- Added a flag to indicate Subpicture coordinates are screen
+ *                                        screen relative rather than source video relative.
+ * rev 0.32.0 (01/13/2011 Xiang Haihao) - Add profile into VAPictureParameterBufferVC1
+ *                                        update VAAPI to 0.32.0
+ *
  * Acknowledgements:
  *  Some concepts borrowed from XvMC and XvImage.
  *  Waldo Bastian (Intel), Matt Sottek (Intel),  Austin Yuan (Intel), and Gwenole Beauchesne (SDS)
@@ -234,7 +238,8 @@ typedef enum
     VAProfileVC1Main			= 9,
     VAProfileVC1Advanced		= 10,
     VAProfileH263Baseline		= 11,
-    VAProfileJPEGBaseline               = 12
+    VAProfileJPEGBaseline               = 12,
+    VAProfileH264ConstrainedBaseline = 13
 } VAProfile;
 
 /* 
@@ -867,6 +872,7 @@ typedef struct _VAPictureParameterBufferVC1
             unsigned int syncmarker	: 1; /* METADATA::SYNCMARKER */
             unsigned int rangered	: 1; /* METADATA::RANGERED */
             unsigned int max_b_frames	: 3; /* METADATA::MAXBFRAMES */
+            unsigned int profile	: 2; /* SEQUENCE_LAYER::PROFILE or The MSB of METADATA::PROFILE */
         } bits;
         unsigned int value;
     } sequence_fields;
@@ -1168,6 +1174,8 @@ typedef struct _VAEncSliceParameterBuffer
         struct {
             unsigned int is_intra	: 1;
             unsigned int disable_deblocking_filter_idc : 2;
+            unsigned int uses_long_term_ref		:1;
+            unsigned int is_long_term_ref		:1;
         } bits;
         unsigned int value;
     } slice_flags;
@@ -1183,6 +1191,7 @@ typedef struct _VAEncSequenceParameterBufferH264
     unsigned char level_idc;
     unsigned int intra_period;
     unsigned int intra_idr_period;
+    unsigned int max_num_ref_frames;
     unsigned int picture_width_in_mbs;
     unsigned int picture_height_in_mbs;
     unsigned int bits_per_second;
@@ -1311,11 +1320,15 @@ VAStatus vaBufferSetNumElements (
  * SLICE_OVERFLOW(bit9): At least one slice in the current frame has
  *              exceeded the maximum slice size specified.
  * BITRATE_OVERFLOW(bit10): The peak bitrate was exceeded for this frame.
+ * BITRATE_HIGH(bit11): The frame size got within the safety margin of the maximum size (VCM only)
+ * AIR_MB_OVER_THRESHOLD: the number of MBs adapted to Intra MB
  */
 #define VA_CODED_BUF_STATUS_PICTURE_AVE_QP_MASK         0xff
 #define VA_CODED_BUF_STATUS_LARGE_SLICE_MASK            0x100
 #define VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK         0x200
 #define VA_CODED_BUF_STATUS_BITRATE_OVERFLOW		0x400
+#define VA_CODED_BUF_STATUS_BITRATE_HIGH		0x800
+#define VA_CODED_BUF_STATUS_AIR_MB_OVER_THRESHOLD	0xff0000
 
 /*
  * device independent data structure for codedbuffer
@@ -1434,6 +1447,39 @@ VAStatus vaQuerySurfaceStatus (
     VADisplay dpy,
     VASurfaceID render_target,
     VASurfaceStatus *status	/* out */
+);
+
+typedef enum
+{
+    VA_DECODE_SLICE_MISSING            = 0,
+    VA_DECODE_MB_ERROR                 = 1,
+} VA_DECODE_ERROR_TYPE;
+
+/*
+ * Client calls vaQuerySurfaceError with VA_STATUS_ERROR_DECODING_ERROR, server side returns
+ * an array of structure VASurfaceDecodeMBErrors, and the array is terminated by setting status=-1
+*/
+typedef struct _VASurfaceDecodeMBErrors
+{
+    int status; /* 1 if hardware has returned detailed info below, -1 means this record is invalid */
+    unsigned int start_mb; /* start mb address with errors */
+    unsigned int end_mb;  /* end mb address with errors */
+    VA_DECODE_ERROR_TYPE decode_error_type;
+} VASurfaceDecodeMBErrors;
+
+/*
+ * After the application gets VA_STATUS_ERROR_DECODING_ERROR after calling vaSyncSurface(),
+ * it can call vaQuerySurfaceError to find out further details on the particular error.
+ * VA_STATUS_ERROR_DECODING_ERROR should be passed in as "error_status",
+ * upon the return, error_info will point to an array of _VASurfaceDecodeMBErrors structure,
+ * which is allocated and filled by libVA with detailed information on the missing or error macroblocks.
+ * The array is terminated if "status==-1" is detected.
+ */
+VAStatus vaQuerySurfaceError(
+    VADisplay dpy,
+    VASurfaceID surface,
+    VAStatus error_status,
+    void **error_info
 );
 
 /*
@@ -1656,8 +1702,9 @@ int vaMaxNumSubpictureFormats (
 );
 
 /* flags for subpictures */
-#define VA_SUBPICTURE_CHROMA_KEYING	0x0001
-#define VA_SUBPICTURE_GLOBAL_ALPHA	0x0002
+#define VA_SUBPICTURE_CHROMA_KEYING			0x0001
+#define VA_SUBPICTURE_GLOBAL_ALPHA			0x0002
+#define VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD	0x0004
 /* 
  * Query supported subpicture formats 
  * The caller must provide a "format_list" array that can hold at
@@ -1666,8 +1713,10 @@ int vaMaxNumSubpictureFormats (
  * number of formats returned in "format_list" is returned in "num_formats".
  *  flags: returned value to indicate addtional capabilities
  *         VA_SUBPICTURE_CHROMA_KEYING - supports chroma-keying
- *         VA_SUBPICTURE_GLOBAL_ALPHA - supports global alpha  
+ *         VA_SUBPICTURE_GLOBAL_ALPHA - supports global alpha
+ * 	   VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD - supports unscaled screen relative subpictures for On Screen Display
  */
+
 VAStatus vaQuerySubpictureFormats (
     VADisplay dpy,
     VAImageFormat *format_list,	/* out */
@@ -1751,7 +1800,7 @@ VAStatus vaAssociateSubpicture (
     unsigned short dest_width,
     unsigned short dest_height,
     /*
-     * whether to enable chroma-keying or global-alpha
+     * whether to enable chroma-keying, global-alpha, or screen relative mode
      * see VA_SUBPICTURE_XXX values
      */
     unsigned int flags
@@ -1801,7 +1850,6 @@ typedef enum
 /* attribute value for VADisplayAttribOutOfLoopDeblock */
 #define VA_OOL_DEBLOCKING_FALSE 0x00000000
 #define VA_OOL_DEBLOCKING_TRUE  0x00000001
-
 
 /* Currently defined display attribute types */
 typedef enum

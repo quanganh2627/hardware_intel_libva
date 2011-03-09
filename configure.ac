@@ -22,14 +22,14 @@
 
 # libva package version number, (as distinct from shared library version)
 m4_define([libva_major_version], [0])
-m4_define([libva_minor_version], [31])
-m4_define([libva_micro_version], [1])
+m4_define([libva_minor_version], [32])
+m4_define([libva_micro_version], [0])
 
 m4_define([libva_version],
           [libva_major_version.libva_minor_version.libva_micro_version])
 
 # if the library source code has changed, increment revision
-m4_define([libva_lt_revision], [6])
+m4_define([libva_lt_revision], [10])
 # if any interface was added/removed/changed, then inc current, reset revision
 m4_define([libva_lt_current], [1])
 # if any interface was added since last public release, then increment age
@@ -42,6 +42,7 @@ AC_CONFIG_SRCDIR([Makefile.am])
 AM_INIT_AUTOMAKE([dist-bzip2])
 
 AM_CONFIG_HEADER([config.h])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 LIBVA_MAJOR_VERSION=libva_major_version
 LIBVA_MINOR_VERSION=libva_minor_version
@@ -100,12 +101,12 @@ PKG_CHECK_MODULES([XEXT],[xext])
 PKG_CHECK_MODULES([XFIXES], [xfixes])
 PKG_CHECK_MODULES([DRM], [libdrm])
 
-PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.0], [gen4asm=yes], [gen4asm=no])
+PKG_CHECK_MODULES(GEN4ASM, [intel-gen4asm >= 1.1], [gen4asm=yes], [gen4asm=no])
 AM_CONDITIONAL(HAVE_GEN4ASM, test x$gen4asm = xyes)
 
-# Check for libdrm >= 2.4.21 (needed for i965_drv_video.so)
-if test x$enable_i965_driver = xyes && ! $PKG_CONFIG --atleast-version=2.4.21 libdrm; then
-    AC_MSG_WARN([libdrm < 2.4.21 found, disabling build of i965 video driver])
+# Check for libdrm >= 2.4.23 (needed for i965_drv_video.so)
+if test x$enable_i965_driver = xyes && ! $PKG_CONFIG --atleast-version=2.4.23 libdrm; then
+    AC_MSG_WARN([libdrm < 2.4.23 found, disabling build of i965 video driver])
     enable_i965_driver=no
 fi
 AM_CONDITIONAL(BUILD_I965_DRIVER, test x$enable_i965_driver = xyes)
@@ -134,6 +135,18 @@ AC_SUBST(GL_DEPS_CFLAGS)
 AC_SUBST(GL_DEPS_LIBS)
 AM_CONDITIONAL(USE_GLX, test "$USE_GLX" = "yes")
 
+# TBD: Check for EGL
+USE_EGL="yes"
+AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
+
+
+# Make sure drivers use the correctly versioned __vaDriverInit*() function name
+VA_DRIVER_INIT_FUNC="__vaDriverInit_${LIBVA_MAJOR_VERSION}_${LIBVA_MINOR_VERSION}"
+AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC], [$VA_DRIVER_INIT_FUNC],
+    [Defined to the versioned __vaDriverInit function name])
+AC_DEFINE_UNQUOTED([VA_DRIVER_INIT_FUNC_S], ["$VA_DRIVER_INIT_FUNC"],
+    [Defined to the versioned __vaDriverInit function name (in string form)])
+
 # We only need the headers, we don't link against the DRM libraries
 LIBVA_CFLAGS="$DRM_CFLAGS"
 AC_SUBST(LIBVA_CFLAGS)
@@ -154,6 +167,7 @@ AC_OUTPUT([
 	va/va_version.h
 	va/x11/Makefile
 	va/glx/Makefile
+	va/egl/Makefile
 	va/dummy/Makefile
 	dummy_drv_video/Makefile
 	i965_drv_video/Makefile
@@ -169,9 +183,35 @@ AC_OUTPUT([
 	test/decode/Makefile
 	test/putsurface/Makefile
 	test/encode/Makefile
+	test/vainfo/Makefile
 	libva.pc
 	libva-x11.pc
 	libva-glx.pc
+	libva-egl.pc
 	libva-tpi.pc
 ])
+
+# Print a small summary
+
+echo ""
+echo "libva - ${LIBVA_VERSION}"
+echo ""
+
+echo " • Global :"
+echo "     Prefix: ${prefix}"
+echo ""
+
+AS_IF([test x$enable_i965_driver = xyes], [DRIVERS="i965 $DRIVERS"]) 
+AS_IF([test x$enable_dummy_driver = xyes], [DRIVERS="dummy $DRIVERS"])
+
+echo " • Drivers: ${DRIVERS}"
+
+AS_IF([test x$USE_GLX = xyes], [BACKENDS="glx $BACKENDS"])
+AS_IF([test x$USE_EGL = xyes], [BACKENDS="egl $BACKENDS"])
+
+BACKENDS="x11 $BACKENDS"
+AS_IF([test x$enable_dummy_backend = xyes], [BACKENDS="dummy 
+$BACKENDS"])
+
+echo " • Winsys : ${BACKENDS}"
 

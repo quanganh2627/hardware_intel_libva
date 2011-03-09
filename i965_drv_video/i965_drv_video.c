@@ -27,6 +27,7 @@
  *
  */
 
+#include "config.h"
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -47,6 +48,14 @@
 #define BUFFER_ID_OFFSET                0x08000000
 #define IMAGE_ID_OFFSET                 0x0a000000
 #define SUBPIC_ID_OFFSET                0x10000000
+
+#define HAS_VC1(ctx)    (IS_GEN6((ctx)->intel.device_id))
+
+/* Defined to 1 if GPU supports H.264 decoding */
+/* XXX: drop IS_IRONLAKE(ctx) check once G4X support is available */
+#define HAS_H264(ctx)   (IS_GEN6((ctx)->intel.device_id) || \
+                         (IS_IRONLAKE((ctx)->intel.device_id) && \
+                          (ctx)->intel.has_bsd))
 
 enum {
     I965_SURFACETYPE_RGBA = 1,
@@ -119,13 +128,23 @@ i965_QueryConfigProfiles(VADriverContextP ctx,
                          VAProfile *profile_list,       /* out */
                          int *num_profiles)             /* out */
 {
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     int i = 0;
 
     profile_list[i++] = VAProfileMPEG2Simple;
     profile_list[i++] = VAProfileMPEG2Main;
-    profile_list[i++] = VAProfileH264Baseline;
-    profile_list[i++] = VAProfileH264Main;
-    profile_list[i++] = VAProfileH264High;
+
+    if (HAS_H264(i965)) {
+        profile_list[i++] = VAProfileH264Baseline;
+        profile_list[i++] = VAProfileH264Main;
+        profile_list[i++] = VAProfileH264High;
+    }
+
+    if (HAS_VC1(i965)) {
+        profile_list[i++] = VAProfileVC1Simple;
+        profile_list[i++] = VAProfileVC1Main;
+        profile_list[i++] = VAProfileVC1Advanced;
+    }
 
     /* If the assert fails then I965_MAX_PROFILES needs to be bigger */
     assert(i <= I965_MAX_PROFILES);
@@ -140,32 +159,37 @@ i965_QueryConfigEntrypoints(VADriverContextP ctx,
                             VAEntrypoint *entrypoint_list,      /* out */
                             int *num_entrypoints)               /* out */
 {
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
+    int n = 0;
 
     switch (profile) {
     case VAProfileMPEG2Simple:
     case VAProfileMPEG2Main:
-        *num_entrypoints = 1;
-        entrypoint_list[0] = VAEntrypointVLD;
+        entrypoint_list[n++] = VAEntrypointVLD;
         break;
 
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
-        *num_entrypoints = 1;
-        entrypoint_list[0] = VAEntrypointVLD;
+        if (HAS_H264(i965))
+            entrypoint_list[n++] = VAEntrypointVLD;
+        break;
+
+    case VAProfileVC1Simple:
+    case VAProfileVC1Main:
+    case VAProfileVC1Advanced:
+        if (HAS_VC1(i965))
+            entrypoint_list[n++] = VAEntrypointVLD;
         break;
 
     default:
-        vaStatus = VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
-        *num_entrypoints = 0;
         break;
     }
 
     /* If the assert fails then I965_MAX_ENTRYPOINTS needs to be bigger */
-    assert(*num_entrypoints <= I965_MAX_ENTRYPOINTS);
-
-    return vaStatus;
+    assert(n <= I965_MAX_ENTRYPOINTS);
+    *num_entrypoints = n;
+    return n > 0 ? VA_STATUS_SUCCESS : VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
 }
 
 VAStatus 
@@ -234,7 +258,7 @@ i965_CreateConfig(VADriverContextP ctx,
                   int num_attribs,
                   VAConfigID *config_id)		/* out */
 {
-    struct i965_driver_data *i965 = i965_driver_data(ctx);
+    struct i965_driver_data * const i965 = i965_driver_data(ctx);
     struct object_config *obj_config;
     int configID;
     int i;
@@ -254,7 +278,18 @@ i965_CreateConfig(VADriverContextP ctx,
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
-        if (VAEntrypointVLD == entrypoint) {
+        if (HAS_H264(i965) && VAEntrypointVLD == entrypoint) {
+            vaStatus = VA_STATUS_SUCCESS;
+        } else {
+            vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
+        }
+
+        break;
+
+    case VAProfileVC1Simple:
+    case VAProfileVC1Main:
+    case VAProfileVC1Advanced:
+        if (HAS_VC1(i965) && VAEntrypointVLD == entrypoint) {
             vaStatus = VA_STATUS_SUCCESS;
         } else {
             vaStatus = VA_STATUS_ERROR_UNSUPPORTED_ENTRYPOINT;
@@ -306,6 +341,7 @@ i965_CreateConfig(VADriverContextP ctx,
 VAStatus 
 i965_DestroyConfig(VADriverContextP ctx, VAConfigID config_id)
 {
+    struct intel_driver_data * const intel = intel_driver_data(ctx);
     struct i965_driver_data *i965 = i965_driver_data(ctx);
     struct object_config *obj_config = CONFIG(config_id);
     VAStatus vaStatus;
@@ -392,8 +428,15 @@ i965_CreateSurfaces(VADriverContextP ctx,
         obj_surface->subpic = VA_INVALID_ID;
         obj_surface->orig_width = width;
         obj_surface->orig_height = height;
-        obj_surface->width = ALIGN(obj_surface->orig_width, 16);
-        obj_surface->height = ALIGN(obj_surface->orig_height, 16);
+
+        if (IS_GEN6(i965->intel.device_id)) {
+            obj_surface->width = ALIGN(obj_surface->orig_width, 128);
+            obj_surface->height = ALIGN(obj_surface->orig_height, 32);
+        } else {
+            obj_surface->width = ALIGN(obj_surface->orig_width, 16);
+            obj_surface->height = ALIGN(obj_surface->orig_height, 16);
+        }
+
         obj_surface->size = SIZE_YUV420(obj_surface->width, obj_surface->height);
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->bo = NULL;
@@ -728,10 +771,13 @@ i965_CreateContext(VADriverContextP ctx,
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
+        if (!HAS_H264(i965))
+            return VA_STATUS_ERROR_UNSUPPORTED_PROFILE;
         render_state->interleaved_uv = 1;
         break;
     default:
-        render_state->interleaved_uv = 0;
+        render_state->interleaved_uv = !!IS_GEN6(i965->intel.device_id);
+        break;
     }
 
     obj_context->context_id = contextID;
@@ -882,6 +928,9 @@ i965_BufferSetNumElements(VADriverContextP ctx,
         vaStatus = VA_STATUS_ERROR_UNKNOWN;
     } else {
         obj_buffer->num_elements = num_elements;
+        if (obj_buffer->buffer_store != NULL) {
+            obj_buffer->buffer_store->num_elements = num_elements;
+        }
     }
 
     return vaStatus;
@@ -952,6 +1001,7 @@ i965_BeginPicture(VADriverContextP ctx,
                   VAContextID context,
                   VASurfaceID render_target)
 {
+    struct intel_driver_data * const intel = intel_driver_data(ctx);
     struct i965_driver_data *i965 = i965_driver_data(ctx); 
     struct object_context *obj_context = CONTEXT(context);
     struct object_surface *obj_surface = SURFACE(render_target);
@@ -975,6 +1025,12 @@ i965_BeginPicture(VADriverContextP ctx,
     case VAProfileH264Baseline:
     case VAProfileH264Main:
     case VAProfileH264High:
+        vaStatus = VA_STATUS_SUCCESS;
+        break;
+
+    case VAProfileVC1Simple:
+    case VAProfileVC1Main:
+    case VAProfileVC1Advanced:
         vaStatus = VA_STATUS_SUCCESS;
         break;
 
@@ -1252,7 +1308,8 @@ i965_Init(VADriverContextP ctx)
         return VA_STATUS_ERROR_UNKNOWN;
 
     if (!IS_G4X(i965->intel.device_id) &&
-        !IS_IRONLAKE(i965->intel.device_id))
+        !IS_IRONLAKE(i965->intel.device_id) &&
+        !IS_GEN6(i965->intel.device_id))
         return VA_STATUS_ERROR_UNKNOWN;
 
     if (i965_media_init(ctx) == False)
@@ -1726,15 +1783,15 @@ i965_PutSurface(VADriverContextP ctx,
     if (flags & (VA_BOTTOM_FIELD | VA_TOP_FIELD))
         pp_flag |= I965_PP_FLAG_DEINTERLACING;
 
-    i965_render_put_surface(ctx, surface,
+    intel_render_put_surface(ctx, surface,
                             srcx, srcy, srcw, srch,
                             destx, desty, destw, desth,
                             pp_flag);
 
     if(obj_surface->subpic != VA_INVALID_ID) {	
-	i965_render_put_subpic(ctx, surface,
-                               srcx, srcy, srcw, srch,
-                               destx, desty, destw, desth);
+	intel_render_put_subpicture(ctx, surface,
+                                    srcx, srcy, srcw, srch,
+                                    destx, desty, destw, desth);
     } 
 
     dri_swap_buffer(ctx, dri_drawable);
@@ -1780,7 +1837,7 @@ i965_Terminate(VADriverContextP ctx)
 }
 
 VAStatus 
-__vaDriverInit_0_31(  VADriverContextP ctx )
+VA_DRIVER_INIT_FUNC(  VADriverContextP ctx )
 {
     struct i965_driver_data *i965;
     int result;

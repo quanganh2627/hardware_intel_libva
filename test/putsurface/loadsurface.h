@@ -21,8 +21,6 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-
 static int yuvgen_planar(int width, int height,
                          unsigned char *Y_start, int Y_pitch,
                          unsigned char *U_start, int U_pitch,
@@ -101,14 +99,14 @@ static int upload_surface(VADisplay va_dpy, VASurfaceID surface_id,
     vaMapBuffer(va_dpy,surface_image.buf,&surface_p);
     assert(VA_STATUS_SUCCESS == va_status);
         
-    U_start = surface_p + surface_image.offsets[1];
-    V_start = surface_p + surface_image.offsets[2];
+    U_start = (char *)surface_p + surface_image.offsets[1];
+    V_start = (char *)surface_p + surface_image.offsets[2];
 
     /* assume surface is planar format */
     yuvgen_planar(surface_image.width, surface_image.height,
-                  surface_p, surface_image.pitches[0],
-                  U_start, surface_image.pitches[1],
-                  V_start, surface_image.pitches[2],
+                  (unsigned char *)surface_p, surface_image.pitches[0],
+                  (unsigned char *)U_start, surface_image.pitches[1],
+                  (unsigned char *)V_start, surface_image.pitches[2],
                   (surface_image.format.fourcc==VA_FOURCC_NV12),
                   box_width, row_shift, field);
         
