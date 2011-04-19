@@ -1851,6 +1851,18 @@ typedef enum
 #define VA_OOL_DEBLOCKING_FALSE 0x00000000
 #define VA_OOL_DEBLOCKING_TRUE  0x00000001
 
+/* Render mode */
+#define VA_RENDER_MODE_UNDEFINED           0
+#define VA_RENDER_MODE_LOCAL_OVERLAY       1
+#define VA_RENDER_MODE_LOCAL_GPU           2
+#define VA_RENDER_MODE_EXTERNAL_OVERLAY    4
+#define VA_RENDER_MODE_EXTERNAL_GPU        8
+
+/* Render device */
+#define VA_RENDER_DEVICE_UNDEFINED  0
+#define VA_RENDER_DEVICE_LOCAL      1
+#define VA_RENDER_DEVICE_EXTERNAL   2
+
 /* Currently defined display attribute types */
 typedef enum
 {
@@ -1861,7 +1873,8 @@ typedef enum
     /* client can specifiy a background color for the target window
      * the new feature of video conference,
      * the uncovered area of the surface is filled by this color
-     * also it will blend with the decoded video color*/
+     * also it will blend with the decoded video color
+     */
     VADisplayAttribBackgroundColor      = 4,
     /*
      * this is a gettable only attribute. For some implementations that use the
@@ -1896,6 +1909,32 @@ typedef enum
      *      b: background color of the drawable
      */
     VADisplayAttribBlendColor          = 13,
+    /*
+     * Indicate driver to skip painting color key or not.
+     * only applicable if the render is overlay
+     */
+    VADisplayAttribOverlayAutoPaintColorKey   = 14,
+    /*
+     * customized overlay color key, the format is RGB888
+     * [23:16] = Red, [15:08] = Green, [07:00] = Blue.
+     */
+    VADisplayAttribOverlayColorKey	= 15,
+    /*
+     * The hint for the implementation of vaPutSurface
+     * normally, the driver could use an overlay or GPU to render the surface on the screen
+     * this flag provides APP the flexibity to switch the render dynamically
+     */
+    VADisplayAttribRenderMode           = 16,
+    /*
+     * specify if vaPutSurface needs to render into specified monitors
+     * one example is that one external monitor (e.g. HDMI) is enabled, 
+     * but the window manager is not aware of it, and there is no associated drawable
+     */
+    VADisplayAttribRenderDevice        = 17,
+    /*
+     * specify vaPutSurface render area if there is no drawable on the monitor
+     */
+    VADisplayAttribRenderRect          = 18,
 } VADisplayAttribType;
 
 /* flags for VADisplayAttribute */

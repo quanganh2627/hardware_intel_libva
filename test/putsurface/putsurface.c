@@ -292,13 +292,14 @@ static int putsurface_thread(void *data)
                     quit = 1;
                     break;
                 }
-
+#if 0
                 /* rescale the video to fit the window */
                 if(event.type == ConfigureNotify) { 
                     width = event.xconfigure.width;
                     height = event.xconfigure.height;
                     printf("Scale window to %dx%d\n", width, height);
                 }	
+#endif
             }
         }
         

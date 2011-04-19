@@ -404,6 +404,46 @@ void va_TraceSurface(VADisplay dpy)
     va_TraceMsg(idx, "\tchecksum = 0x%02x\n", check_sum & 0xff);
 }
 
+
+VAStatus va_TraceInitialize (
+    VADisplay dpy,
+    int *major_version,	 /* out */
+    int *minor_version 	 /* out */
+)
+{
+    int i;
+    int idx;
+
+    for (idx = 0; idx < TRACE_CONTEXT_MAX; idx++)
+        if (trace_context[idx].dpy == dpy)
+            break;
+
+    if (idx == TRACE_CONTEXT_MAX)
+        return VA_STATUS_ERROR_UNKNOWN;
+
+    TRACE_FUNCNAME(idx);
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus va_TraceTerminate (
+    VADisplay dpy
+)
+{
+    int i;
+    int idx;
+
+    for (idx = 0; idx < TRACE_CONTEXT_MAX; idx++)
+        if (trace_context[idx].dpy == dpy)
+            break;
+
+    if (idx == TRACE_CONTEXT_MAX)
+        return VA_STATUS_ERROR_UNKNOWN;
+
+    TRACE_FUNCNAME(idx);
+    return VA_STATUS_SUCCESS;
+}
+
+
 void va_TraceCreateConfig(
     VADisplay dpy,
     VAProfile profile, 
@@ -1815,12 +1855,12 @@ void va_TracePutSurface (
     
     va_TraceMsg(idx, "\tsurface = 0x%08x\n", surface);
     va_TraceMsg(idx, "\tdraw = 0x%08x\n", draw);
-    va_TraceMsg(idx, "\tsrcx = %d\n", surface);
-    va_TraceMsg(idx, "\tsrcy = %d\n", surface);
-    va_TraceMsg(idx, "\tsrcw = %d\n", surface);
-    va_TraceMsg(idx, "\tsrch = %d\n", surface);
-    va_TraceMsg(idx, "\tdestx = %d\n", surface);
-    va_TraceMsg(idx, "\tdesty = %d\n", surface);
+    va_TraceMsg(idx, "\tsrcx = %d\n", srcx);
+    va_TraceMsg(idx, "\tsrcy = %d\n", srcy);
+    va_TraceMsg(idx, "\tsrcw = %d\n", srcw);
+    va_TraceMsg(idx, "\tsrch = %d\n", srch);
+    va_TraceMsg(idx, "\tdestx = %d\n", destx);
+    va_TraceMsg(idx, "\tdesty = %d\n", desty);
     va_TraceMsg(idx, "\tdestw = %d\n", destw);
     va_TraceMsg(idx, "\tdesth = %d\n", desth);
     va_TraceMsg(idx, "\tcliprects = 0x%08x\n", cliprects);
