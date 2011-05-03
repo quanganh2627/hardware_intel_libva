@@ -22,6 +22,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+Display *dpy;
+VADisplay va_dpy;
+VAStatus va_status;
+VAProfile *profiles ;
+int major_version, minor_version;
 
 void test_init()
 {

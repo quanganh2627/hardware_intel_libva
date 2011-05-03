@@ -22,12 +22,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <va/va.h>
 #ifdef ANDROID
 #include <va/va_android.h>
 #else
 #include <va/va_x11.h>
 #endif
-
 #include "assert.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -38,6 +38,7 @@
 
 #define ASSERT	assert
 
+void status(const char *msg, ...);
 #ifdef ANDROID
 #include "test_android.c"
 #else

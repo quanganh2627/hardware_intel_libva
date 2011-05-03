@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2008 Intel Corporation. All Rights Reserved.
+ * Copyright (c) 2008-2009 Intel Corporation. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -21,15 +21,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-/*
- * it is a real program to show how VAAPI encoding work,
- * It does H264 element stream level encoding on auto-generated YUV data
- *
- * gcc -o  h264encode  h264encode -lva -lva-x11
- * ./h264encode -w <width> -h <height> -n <frame_num>
- *
- */  
+#include <stdio.h>
+#include <va/va.h>
+#include <va/va_android.h>
 #include <binder/IPCThreadState.h>
 #include <binder/ProcessState.h>
 #include <binder/IServiceManager.h>
@@ -39,32 +33,45 @@
 #include <surfaceflinger/ISurface.h>
 #include <surfaceflinger/SurfaceComposerClient.h>
 #include <binder/MemoryHeapBase.h>
+#include <assert.h>
+#include <pthread.h>
+
 #define Display unsigned int
+static  int win_thread0 = 0, win_thread1 = 0;
+static  int multi_thread = 0;
 
 using namespace android;
 #include "../android_winsys.cpp"
-#include "h264encode_common.c"
 
 sp<SurfaceComposerClient> client;
 sp<Surface> android_surface;
 sp<ISurface> android_isurface;
 sp<SurfaceControl> surface_ctrl;
 
-static int display_surface(int frame_id, int *exit_encode)
-{
-    VAStatus va_status;
+sp<SurfaceComposerClient> client1;
+sp<Surface> android_surface1;
+sp<ISurface> android_isurface1;
+sp<SurfaceControl> surface_ctrl1;
 
+
+static int create_window(int width, int height)
+{
     sp<ProcessState> proc(ProcessState::self());
     ProcessState::self()->startThreadPool();
 
     printf("Create window0 for thread0\n");
-    SURFACE_CREATE(client,surface_ctrl,android_surface, android_isurface, win_width, win_height);
-    va_status = vaPutSurface(va_dpy, surface_id[frame_id], android_isurface,
-            0,0, frame_width, frame_height,
-            0,0, win_width, win_height,
-            NULL,0,0);
+    SURFACE_CREATE(client,surface_ctrl,android_surface, android_isurface, width, height);
 
-    *exit_encode = 0;
+    win_thread0 = 1;
+    if (multi_thread == 0)
+        return 0;
+
+    printf("Create window1 for thread1\n");
+    /* need to modify here jgl*/
+    SURFACE_CREATE(client1,surface_ctrl1,android_surface1, android_isurface1, width, height);
+
+    win_thread1 = 2;
     return 0;
 }
 
+#include "putsurface_common.c"
