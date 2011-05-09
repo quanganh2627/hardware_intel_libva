@@ -71,6 +71,8 @@ struct dri_state
 Bool isDRI2Connected(VADriverContextP ctx, char **driver_name);
 Bool isDRI1Connected(VADriverContextP ctx, char **driver_name);
 void free_drawable_hashtable(VADriverContextP ctx);
+void free_drawable(VADriverContextP ctx, struct dri_drawable *dri_drawable);
+void free_all_drawable(VADriverContextP ctx);
 struct dri_drawable *dri_get_drawable(VADriverContextP ctx, XID drawable);
 void dri_swap_buffer(VADriverContextP ctx, struct dri_drawable *dri_drawable);
 union dri_buffer *dri_get_rendering_buffer(VADriverContextP ctx, struct dri_drawable *dri_drawable);
