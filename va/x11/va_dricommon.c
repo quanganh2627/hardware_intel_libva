@@ -72,19 +72,6 @@ free_drawable(VADriverContextP ctx, struct dri_drawable* dri_drawable)
 }
 
 void
-free_all_drawable(VADriverContextP ctx)
-{
-    struct dri_state *dri_state = (struct dri_state *)ctx->dri_state;
-    int i = 0;
-    while (i++ < DRAWABLE_HASH_SZ) {
-	if (dri_state->drawable_hash[i]) {
-	    dri_state->destroyDrawable(ctx, dri_state->drawable_hash[i]);
-	    dri_state->drawable_hash[i] = NULL;
-	}
-    }
-}
-
-void
 free_drawable_hashtable(VADriverContextP ctx)
 {
     struct dri_state *dri_state = (struct dri_state *)ctx->dri_state;

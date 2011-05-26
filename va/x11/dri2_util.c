@@ -144,8 +144,9 @@ dri2Close(VADriverContextP ctx)
     struct dri_state *dri_state = (struct dri_state *)ctx->dri_state;
 
     free_drawable_hashtable(ctx);
-    assert(dri_state->fd >= 0);
-    close(dri_state->fd);
+
+    if (dri_state->fd >= 0);
+	close(dri_state->fd);
 }
 
 Bool 
