@@ -1,5 +1,5 @@
 /*
- * Copyright © 2009 Intel Corporation
+ * Copyright © 2011 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -23,78 +23,87 @@
  *
  * Authors:
  *    Xiang Haihao <haihao.xiang@intel.com>
- *    Zou Nan hai <nanhai.zou@intel.com>
  *
  */
 
-#ifndef _I965_MEDIA_H_
-#define _I965_MEDIA_H_
+#ifndef _GEN7_MFD_H_
+#define _GEN7_MFD_H_
 
 #include <xf86drm.h>
 #include <drm.h>
 #include <i915_drm.h>
 #include <intel_bufmgr.h>
 
-#include "i965_structs.h"
+struct gen7_avc_surface
+{
+    dri_bo *dmv_top;
+    dri_bo *dmv_bottom;
+    int dmv_bottom_flag;
+};
 
-#define MAX_INTERFACE_DESC      16
-#define MAX_MEDIA_SURFACES      34
+#define GEN7_VC1_I_PICTURE              0
+#define GEN7_VC1_P_PICTURE              1
+#define GEN7_VC1_B_PICTURE              2
+#define GEN7_VC1_BI_PICTURE             3
+#define GEN7_VC1_SKIPPED_PICTURE        4
 
-#define MPEG_TOP_FIELD		1
-#define MPEG_BOTTOM_FIELD	2
-#define MPEG_FRAME		3
+#define GEN7_VC1_SIMPLE_PROFILE         0
+#define GEN7_VC1_MAIN_PROFILE           1
+#define GEN7_VC1_ADVANCED_PROFILE       2
+#define GEN7_VC1_RESERVED_PROFILE       3
 
-struct decode_state;
+struct gen7_vc1_surface
+{
+    dri_bo *dmv;
+    int picture_type;
+};
 
-struct i965_media_context
+#define MAX_MFX_REFERENCE_SURFACES        16
+struct hw_context;
+
+struct gen7_mfd_context
 {
     struct hw_context base;
 
     struct {
-        dri_bo *bo;
-    } surface_state[MAX_MEDIA_SURFACES];
+        VASurfaceID surface_id;
+        int frame_store_id;
+    } reference_surface[MAX_MFX_REFERENCE_SURFACES];
 
     struct {
         dri_bo *bo;
-    } binding_table;
+        int valid;
+    } post_deblocking_output;
 
     struct {
         dri_bo *bo;
-    } idrt;  /* interface descriptor remap table */
+        int valid;
+    } pre_deblocking_output;
 
     struct {
         dri_bo *bo;
-        int enabled;
-    } extended_state;
+        int valid;
+    } intra_row_store_scratch_buffer;
 
     struct {
         dri_bo *bo;
-    } vfe_state;
+        int valid;
+    } deblocking_filter_row_store_scratch_buffer;
 
     struct {
         dri_bo *bo;
-    } curbe;
+        int valid;
+    } bsd_mpc_row_store_scratch_buffer;
 
     struct {
         dri_bo *bo;
-        unsigned long offset;
-    } indirect_object;
+        int valid;
+    } mpr_row_store_scratch_buffer;
 
     struct {
-        unsigned int vfe_start;
-        unsigned int cs_start;
-
-        unsigned int num_vfe_entries;
-        unsigned int num_cs_entries;
-
-        unsigned int size_vfe_entry;
-        unsigned int size_cs_entry;
-    } urb;
-
-    void *private_context;
-    void (*media_states_setup)(VADriverContextP ctx, struct decode_state *decode_state, struct i965_media_context *media_context);
-    void (*media_objects)(VADriverContextP ctx, struct decode_state *decode_state, struct i965_media_context *media_context);
-    void (*free_private_context)(void **data);
+        dri_bo *bo;
+        int valid;
+    } bitplane_read_buffer;
 };
 
-#endif /* _I965_MEDIA_H_ */
+#endif /* _GEN7_MFD_H_ */
