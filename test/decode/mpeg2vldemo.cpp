@@ -156,8 +156,8 @@ static VASliceParameterBufferMPEG2 slice_param={
 #define CLIP_WIDTH  16
 #define CLIP_HEIGHT 16
 
-#define WIN_WIDTH  (CLIP_WIDTH<<1)
-#define WIN_HEIGHT (CLIP_HEIGHT<<1)
+static int WIN_HEIGHT=(CLIP_HEIGHT<<1);
+static int WIN_WIDTH=(CLIP_WIDTH<<1);
 
 int main(int argc,char **argv)
 {

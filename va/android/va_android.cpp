@@ -136,7 +136,7 @@ static VAStatus va_DisplayContextGetDriverName (
     *driver_name = strdup(devices[0].driver_name);
         
     dri_state->driConnectedFlag = VA_DUMMY;
-    
+
     return VA_STATUS_SUCCESS;
 }
 #else
@@ -191,7 +191,7 @@ static VAStatus va_DisplayContextGetDriverName (
            driver_name, vendor_id, device_id);
     
     dri_state->driConnectedFlag = VA_DUMMY;
-    
+
     return VA_STATUS_SUCCESS;
 }
 #endif
