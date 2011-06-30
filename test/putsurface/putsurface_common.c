@@ -291,21 +291,20 @@ int main(int argc,char **argv)
                 break;
         }
     }
-    surface_width = win_width;
-    surface_height = win_height;
 
     win_display = (void *)open_display();
     if (win_display == NULL) {
         fprintf(stderr, "Can't open the connection of display!\n");
         exit(-1);
     }
-    create_window(win_display, &win_width, &win_height);
-    printf("Window %dx%d is created\n", win_width, win_height);
-    
+    create_window(win_display, win_width, win_height);
+
     va_dpy = vaGetDisplay(win_display);
     va_status = vaInitialize(va_dpy, &major_ver, &minor_ver);
     CHECK_VASTATUS(va_status, "vaInitialize");
 
+    surface_width = win_width;
+    surface_height = win_height;
     va_status = vaCreateSurfaces(va_dpy,surface_width, surface_height,
                                 VA_RT_FORMAT_YUV420, SURFACE_NUM, &surface_id[0]);
     CHECK_VASTATUS(va_status, "vaCreateSurfaces");

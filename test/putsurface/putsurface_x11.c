@@ -32,8 +32,8 @@ static  pthread_mutex_t gmutex;
 
 static void *open_display(void);
 static void close_display(void *win_display);
-static int create_window(void *win_display, int *width, int *height);
-static int check_window_event(Display *x11_display, Window win, int *width, int *height, int *quit);
+static int create_window(void *win_display, int width, int height);
+static int check_window_event(void *x11_display, void *drawable, int *width, int *height, int *quit);
 
 #define CAST_DRAWABLE(a)  (Drawable)(a)
 
@@ -68,19 +68,19 @@ static Pixmap create_pixmap(void *win_display, int width, int height)
     return pixmap;
 }
 
-static int create_window(void *win_display, int *width_ret, int *height_ret)
+static int create_window(void *win_display, int width, int height)
 {
     Display *x11_display = (Display *)win_display;
     int screen = DefaultScreen(x11_display);
     Window root, win;
-    int width = *width_ret;
-    int height = *height_ret;
 
     root = RootWindow(x11_display, screen);
 
     printf("Create window0 for thread0\n");
     drawable_thread0 = (void *)XCreateSimpleWindow(x11_display, root, 0, 0, width, height,
                                            0, 0, WhitePixel(x11_display, 0));
+
+    win = (Window)drawable_thread0;
     if (drawable_thread0) {
         XSizeHints sizehints;
         sizehints.width  = width;
@@ -108,6 +108,7 @@ static int create_window(void *win_display, int *width_ret, int *height_ret)
     
     drawable_thread1 = (void *)XCreateSimpleWindow(x11_display, root, width, 0, width, height,
                                             0, 0, WhitePixel(x11_display, 0));
+    win = (Window)drawable_thread1;
     if (drawable_thread1) {
         XSizeHints sizehints;
         sizehints.width  = width;
@@ -131,10 +132,13 @@ static int create_window(void *win_display, int *width_ret, int *height_ret)
     return 0;
 }
 
-static int check_window_event(Display *x11_display, Window win, int *width, int *height, int *quit)
+static int check_window_event(void *win_display, void *drawable, int *width, int *height, int *quit)
 {
     int is_event = 0;
     XEvent event;
+    Window win = (Window)drawable;
+    Display *x11_display = (Display *)win_display;
+    
     
     if (check_event == 0)
         return 0;
@@ -160,6 +164,8 @@ static int check_window_event(Display *x11_display, Window win, int *width, int 
         printf("Scale window to %dx%d\n", width, height);
     }
 #endif
+
+    return 0;
 }
 
 
