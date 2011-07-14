@@ -104,18 +104,18 @@ static const i965_subpic_format_map_t
 i965_subpic_formats_map[I965_MAX_SUBPIC_FORMATS + 1] = {
     { I965_SURFACETYPE_INDEXED, I965_SURFACEFORMAT_P4A4_UNORM,
       { VA_FOURCC('I','A','4','4'), VA_MSB_FIRST, 8, },
-      0 },
+      VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD },
     { I965_SURFACETYPE_INDEXED, I965_SURFACEFORMAT_A4P4_UNORM,
       { VA_FOURCC('A','I','4','4'), VA_MSB_FIRST, 8, },
-      0 },
+      VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD },
     { I965_SURFACETYPE_RGBA, I965_SURFACEFORMAT_B8G8R8A8_UNORM,
       { VA_FOURCC('B','G','R','A'), VA_LSB_FIRST, 32,
         32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 },
-      0 },
+      VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD },
     { I965_SURFACETYPE_RGBA, I965_SURFACEFORMAT_R8G8B8A8_UNORM,
       { VA_FOURCC('R','G','B','A'), VA_LSB_FIRST, 32,
         32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 },
-      0 },
+      VA_SUBPICTURE_DESTINATION_IS_SCREEN_COORD },
 };
 
 static const i965_subpic_format_map_t *
@@ -435,8 +435,6 @@ i965_destroy_surface(struct object_heap *heap, struct object_base *obj)
 
     dri_bo_unreference(obj_surface->bo);
     obj_surface->bo = NULL;
-    dri_bo_unreference(obj_surface->pp_out_bo);
-    obj_surface->pp_out_bo = NULL;
 
     if (obj_surface->free_private_data != NULL) {
         obj_surface->free_private_data(&obj_surface->private_data);
@@ -491,7 +489,6 @@ i965_CreateSurfaces(VADriverContextP ctx,
         obj_surface->flags = SURFACE_REFERENCED;
         obj_surface->fourcc = 0;
         obj_surface->bo = NULL;
-        obj_surface->pp_out_bo = NULL;
         obj_surface->locked_image_id = VA_INVALID_ID;
         obj_surface->private_data = NULL;
         obj_surface->free_private_data = NULL;
@@ -695,6 +692,7 @@ i965_AssociateSubpicture(VADriverContextP ctx,
     obj_subpic->dst_rect.y      = dest_y;
     obj_subpic->dst_rect.width  = dest_width;
     obj_subpic->dst_rect.height = dest_height;
+    obj_subpic->flags           = flags;
 
     for (i = 0; i < num_surfaces; i++) {
         struct object_surface *obj_surface = SURFACE(target_surfaces[i]);
@@ -2244,10 +2242,12 @@ i965_PutSurface(VADriverContextP ctx,
     union dri_buffer *buffer;
     struct intel_region *dest_region;
     struct object_surface *obj_surface; 
+    VARectangle src_rect, dst_rect;
     int ret;
     uint32_t name;
     Bool new_region = False;
     int pp_flag = 0;
+
     /* Currently don't support DRI1 */
     if (dri_state->driConnectedFlag != VA_DRI2)
         return VA_STATUS_ERROR_UNKNOWN;
@@ -2305,16 +2305,21 @@ i965_PutSurface(VADriverContextP ctx,
     if (flags & (VA_BOTTOM_FIELD | VA_TOP_FIELD))
         pp_flag |= I965_PP_FLAG_DEINTERLACING;
 
-    intel_render_put_surface(ctx, surface,
-                             srcx, srcy, srcw, srch,
-                             destx, desty, destw, desth,
-                             pp_flag);
+    src_rect.x      = srcx;
+    src_rect.y      = srcy;
+    src_rect.width  = srcw;
+    src_rect.height = srch;
+
+    dst_rect.x      = destx;
+    dst_rect.y      = desty;
+    dst_rect.width  = destw;
+    dst_rect.height = desth;
+
+    intel_render_put_surface(ctx, surface, &src_rect, &dst_rect, pp_flag);
 
     if(obj_surface->subpic != VA_INVALID_ID) {
-        intel_render_put_subpicture(ctx, surface,
-                                    srcx, srcy, srcw, srch,
-                                    destx, desty, destw, desth);
-    } 
+        intel_render_put_subpicture(ctx, surface, &src_rect, &dst_rect);
+    }
 
     dri_swap_buffer(ctx, dri_drawable);
     obj_surface->flags |= SURFACE_DISPLAYED;
