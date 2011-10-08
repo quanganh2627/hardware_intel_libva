@@ -23,9 +23,10 @@
 
 bin_PROGRAMS = vainfo
 
-AM_CFLAGS = -I$(top_srcdir)/va -I$(top_srcdir)/test/basic -I$(top_srcdir)/src/x11
+INCLUDES = -I$(top_srcdir) -I$(top_srcdir)/test/basic
 
-vainfo_LDADD = $(top_builddir)/va/$(libvacorelib) $(top_builddir)/va/$(libvabackendlib)
+vainfo_LDADD = $(top_builddir)/va/$(libvacorelib) $(top_builddir)/va/$(libvabackendlib) -lX11
+
 vainfo_DEPENDENCIES =  $(top_builddir)/va/$(libvacorelib) $(top_builddir)/va/$(libvabackendlib)
 vainfo_SOURCES = vainfo.c
 

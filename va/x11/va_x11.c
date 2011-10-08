@@ -26,6 +26,8 @@
 #include "sysdeps.h"
 #include "va.h"
 #include "va_backend.h"
+#include "va_trace.h"
+#include "va_fool.h"
 #include "va_x11.h"
 #include "va_dri.h"
 #include "va_dri2.h"
@@ -107,12 +109,12 @@ static VAStatus va_NVCTRL_GetDriverName (
     int direct_capable, driver_major, driver_minor, driver_patch;
     Bool result;
 
-    result = VA_NVCTRLQueryDirectRenderingCapable((Display *)ctx->native_dpy, ctx->x11_screen,
+    result = VA_NVCTRLQueryDirectRenderingCapable(ctx->native_dpy, ctx->x11_screen,
                                                   &direct_capable);
     if (!result || !direct_capable)
         return VA_STATUS_ERROR_UNKNOWN;
 
-    result = VA_NVCTRLGetClientDriverName((Display *)ctx->native_dpy, ctx->x11_screen,
+    result = VA_NVCTRLGetClientDriverName(ctx->native_dpy, ctx->x11_screen,
                                           &driver_major, &driver_minor,
                                           &driver_patch, driver_name);
     if (!result)
@@ -208,13 +210,6 @@ VADisplay vaGetDisplay (
 #define CTX(dpy) (((VADisplayContextP)dpy)->pDriverContext)
 #define CHECK_DISPLAY(dpy) if( !vaDisplayIsValid(dpy) ) { return VA_STATUS_ERROR_INVALID_DISPLAY; }
 
-extern int fool_postp; /* do nothing for vaPutSurface if set */
-extern int trace_flag; /* trace vaPutSurface parameters */
-#define VA_TRACE(trace_func,...)                \
-    if (trace_flag) {                           \
-        trace_func(__VA_ARGS__);                \
-    }
-
 void va_TracePutSurface (
     VADisplay dpy,
     VASurfaceID surface,
@@ -258,8 +253,8 @@ VAStatus vaPutSurface (
   CHECK_DISPLAY(dpy);
   ctx = CTX(dpy);
   
-  VA_TRACE(va_TracePutSurface, dpy, surface, (void *)draw, srcx, srcy, srcw, srch,
-           destx, desty, destw, desth,
+  VA_TRACE_FUNC(va_TracePutSurface, dpy, surface, (void *)draw, srcx, srcy, srcw, srch,
+                destx, desty, destw, desth,
            cliprects, number_cliprects, flags );
   
   return ctx->vtable->vaPutSurface( ctx, surface, (void *)draw, srcx, srcy, srcw, srch,
