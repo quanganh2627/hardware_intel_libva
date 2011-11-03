@@ -134,6 +134,7 @@ typedef int VAStatus;	/* Return status type from functions */
 #define VA_STATUS_ERROR_INVALID_IMAGE_FORMAT    0x00000016
 #define VA_STATUS_ERROR_DECODING_ERROR          0x00000017
 #define VA_STATUS_ERROR_ENCODING_ERROR          0x00000018
+#define VA_STATUS_ERROR_HW_BUSY			0x00000019
 #define VA_STATUS_ERROR_UNKNOWN			0xFFFFFFFF
 
 /* De-interlacing flags for vaPutSurface() */
@@ -528,6 +529,7 @@ typedef enum
     VAEncMiscParameterTypeRateControl  	= 1,
     VAEncMiscParameterTypeMaxSliceSize	= 2,
     VAEncMiscParameterTypeAIR    	= 3,
+    VAEncMiscParameterTypeHRD		= 4
 } VAEncMiscParameterType;
 
 /*
@@ -587,6 +589,11 @@ typedef struct _VAEncMiscParameterAIR
     unsigned int air_auto; /* if set to 1 then hardware auto-tune the AIR threshold */
 } VAEncMiscParameterAIR;
 
+typedef struct _VAEncMiscParameterHRD
+{
+     unsigned int buffer_size; /* in bits */
+     unsigned int initial_buffer_fullness; /* in bits */
+} VAEncMiscParameterHRD;
 
 /* 
  * There will be cases where the bitstream buffer will not have enough room to hold
