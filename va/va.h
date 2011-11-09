@@ -564,7 +564,18 @@ typedef struct _VAEncMiscParameterRateControl
     unsigned int window_size; /* windows size in milliseconds. For example if this is set to 500, then the rate control will guarantee the */
                               /* target bit-rate over a 500 ms window */
     unsigned int initial_qp;  /* initial QP at I frames */
-    unsigned int min_qp;     
+    unsigned int min_qp;
+    union
+    {
+        struct
+        {
+            unsigned int reset : 1;
+            unsigned int disable_frame_skip : 1; /* Disable frame skip in rate control mode */
+            unsigned int disable_bit_stuffing : 1; /* Disable bit stuffing in rate control mode */
+            unsigned int : 29;
+        } bits;
+        unsigned int value;
+    } rc_flags;
 } VAEncMiscParameterRateControl;
 
 typedef struct _VAEncMiscParameterFrameRate
