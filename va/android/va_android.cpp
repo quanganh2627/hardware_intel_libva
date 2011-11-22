@@ -305,4 +305,20 @@ VAStatus vaPutSurface (
                                      destx, desty, destw, desth,
                                      cliprects, number_cliprects, flags );
 }
+
+VAStatus vaGetBufferID (
+    VADisplay dpy,
+    VASurfaceID surface,
+    uint32_t* devid,
+    uint32_t* bufid
+)
+{
+    VADriverContextP ctx;
+
+    CHECK_DISPLAY(dpy);
+    ctx = CTX(dpy);
+
+    return ctx->vtable->vaGetBufferID( ctx, surface, devid, bufid);
+};
+
 #endif

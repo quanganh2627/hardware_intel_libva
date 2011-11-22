@@ -202,6 +202,13 @@ struct VADriverVTable
 		unsigned int flags /* de-interlacing flags */
 	);
 
+        VAStatus (*vaGetBufferID) (
+                VADriverContextP ctx,
+                VASurfaceID surface,
+                uint32_t* devid,
+                uint32_t* bufid
+        );
+
 	VAStatus (*vaQueryImageFormats) (
 		VADriverContextP ctx,
 		VAImageFormat *format_list,        /* out */

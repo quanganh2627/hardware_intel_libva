@@ -29,5 +29,16 @@ struct VABuffer
    unsigned int frame_structure;
 };
 
+struct VABufferIDPackage
+{
+    uint32_t devid;
+    uint32_t bufid;
+    uint32_t width;
+    uint32_t height;
+};
+
+#define ID_PKG_WIDTH_OPAQUE 320
+#define ID_PKG_HEIGHT_OPAQUE 240
+
 #endif /* __VA_BUFFER_H__ */
 
