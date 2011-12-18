@@ -48,13 +48,6 @@ VAStatus vaPutSurface (
     unsigned int flags /* PutSurface flags */
 );
 
-VAStatus vaGetBufferID (
-    VADisplay dpy,
-    VASurfaceID surface,
-    uint32_t* devid,
-    uint32_t* bufid
-);
-
 #endif /* ANDROID */
 #endif /* __cplusplus */
 

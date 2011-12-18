@@ -588,7 +588,9 @@ VAStatus vaCreateSurfaces (
     int height,
     int format,
     int num_surfaces,
-    VASurfaceID *surfaces	/* out */
+    VASurfaceID *surfaces,	/* out */
+    VASurfaceAttrib *attrib_list,
+    int num_attribs
 )
 {
   VADriverContextP ctx;
@@ -598,13 +600,12 @@ VAStatus vaCreateSurfaces (
   CHECK_DISPLAY(dpy);
   ctx = CTX(dpy);
 
-  vaStatus = ctx->vtable->vaCreateSurfaces( ctx, width, height, format, num_surfaces, surfaces );
+  vaStatus = ctx->vtable->vaCreateSurfaces(ctx, width, height, format, num_surfaces, surfaces, attrib_list, num_attribs);
 
-  VA_TRACE_LOG(va_TraceCreateSurface, dpy, width, height, format, num_surfaces, surfaces);
+  VA_TRACE_LOG(va_TraceCreateSurface, dpy, width, height, format, num_surfaces, surfaces, attrib_list, num_attribs);
   
   return vaStatus;
 }
-
 
 VAStatus vaDestroySurfaces (
     VADisplay dpy,

@@ -86,14 +86,16 @@ struct VADriverVTable
 		int *num_attribs		/* out */
 	);
 
-	VAStatus (*vaCreateSurfaces) (
-		VADriverContextP ctx,
-		int width,
-		int height,
-		int format,
-		int num_surfaces,
-		VASurfaceID *surfaces		/* out */
-	);
+    VAStatus (*vaCreateSurfaces) (
+        VADriverContextP ctx,
+        int width,
+        int height,
+        int format,
+        int num_surfaces,
+        VASurfaceID *surfaces,  /* out */
+        VASurfaceAttrib *attrib_list,
+        int num_attribs
+    );
 
 	VAStatus (*vaDestroySurfaces) (
 		VADriverContextP ctx,
@@ -201,13 +203,6 @@ struct VADriverVTable
 		unsigned int number_cliprects, /* number of clip rects in the clip list */
 		unsigned int flags /* de-interlacing flags */
 	);
-
-        VAStatus (*vaGetBufferID) (
-                VADriverContextP ctx,
-                VASurfaceID surface,
-                uint32_t* devid,
-                uint32_t* bufid
-        );
 
 	VAStatus (*vaQueryImageFormats) (
 		VADriverContextP ctx,

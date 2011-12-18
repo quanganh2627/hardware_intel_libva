@@ -279,6 +279,70 @@ typedef struct _VAConfigAttrib {
     unsigned int value; /* OR'd flags (bits) for this attribute */
 } VAConfigAttrib;
 
+typedef enum
+{
+    VAGenericValueTypeInteger,
+    VAGenericValueTypeFloat,
+    VAGenericValueTypePointer,
+} VAGenericValueType;
+
+typedef struct _VAGenericValue {
+    VAGenericValueType type;
+    union
+    {
+        int i_val;
+        float f_val;
+        void *p_val;
+    } value;
+} VAGenericValue;
+
+/*
+ * Surface attributes are used for the client to query additional details
+ * on the surface formats and types supported by the underlying implementation,
+ * and convey its preferences to the implementation.
+ */
+typedef enum
+{
+    VASurfaceAttribPixelFormats, /* value is pointer to array of fourcc */
+    VASurfaceAttribMinWidth, /* value is int */
+    VASurfaceAttribMaxWidth, /* value is int */
+    VASurfaceAttribMinHeight, /* value is int */
+    VASurfaceAttribMaxHeight, /* value is int */
+    VASurfaceAttribAlignment, /* value is int (bytes) */
+    VASurfaceAttribNativeHandle /* value is void *p_val */
+} VASurfaceAttribType;
+
+/* value for "flags" in VASurfaceAttrib */
+#define VA_SURFACE_ATTRIB_NOT_SUPPORTED	0x00000000 /* not supported */
+#define VA_SURFACE_ATTRIB_GETTABLE	0x00000001 /* value is gettable */
+#define VA_SURFACE_ATTRIB_SETTABLE	0x00000002 /* value is settable */
+
+typedef struct _VASurfaceAttrib {
+    VASurfaceAttribType type;
+    unsigned int flags;
+    VAGenericValue value;
+} VASurfaceAttrib;
+
+typedef enum {
+    VAExternalMemoryAndroidGrallocBuffer, /* the memory is from Android Gralloc memory */
+    VAExternalMemoryKernelDRMBufffer, /* the memory is from kernel DRM buffers */
+    VAExternalMemoryUserPointer, /* the memory is malloc-ed and has a user pointer */
+} VAExternalMemoryType;
+
+typedef struct _VAExternalMemoryBuffers {
+    VAExternalMemoryType type;
+    unsigned int width;
+    unsigned int height;
+    unsigned int pixel_format; /* buffer format */
+    unsigned int luma_stride; /* luma stride, could be width aligned with a special value */
+    unsigned int chroma_u_stride; /* chroma stride */
+    unsigned int chroma_v_stride;
+    unsigned int luma_offset; /* could be 0 */
+    unsigned int chroma_u_offset; /* UV offset from the beginning of the memory */
+    unsigned int count; /* buffer count for surface creation */
+    unsigned int *buffers; /* buffer handles or user pointers */
+} VAExternalMemoryBuffers;
+
 /* attribute value for VAConfigAttribRTFormat */
 #define VA_RT_FORMAT_YUV420	0x00000001	
 #define VA_RT_FORMAT_YUV422	0x00000002
@@ -397,6 +461,21 @@ VAStatus vaQueryConfigAttributes (
     int *num_attribs 		/* out */
 );
 
+/* Get maximum number of surface attributs supported by the implementation */
+int vaMaxNumSurfaceAttributes (
+    VADisplay dpy
+);
+
+/*
+ * Query the implementation on what surface attributes are supported
+ * depending on the intended usage for the surfaces.
+ */
+VAStatus vaQuerySurfaceAttributes (
+    VADisplay dpy,
+    VAConfigID config,
+    VASurfaceAttrib *attrib_list, /* in/out */
+    int num_attribs
+);
 
 /*
  * Contexts and Surfaces
@@ -429,6 +508,8 @@ typedef VAGenericID VASurfaceID;
  *  format: VA_RT_FORMAT_YUV420, VA_RT_FORMAT_YUV422 or VA_RT_FORMAT_YUV444
  *  num_surfaces: number of surfaces to be created
  *  surfaces: array of surfaces created upon return
+ *  attrib_list: attributes for the surfaces to be created
+ *  num_attribs: number of attributes in attrib_list
  */
 VAStatus vaCreateSurfaces (
     VADisplay dpy,
@@ -436,9 +517,10 @@ VAStatus vaCreateSurfaces (
     int height,
     int format,
     int num_surfaces,
-    VASurfaceID *surfaces	/* out */
+    VASurfaceID *surfaces,	/* out */
+    VASurfaceAttrib *attrib_list,
+    int num_attribs
 );
-
     
 /*
  * vaDestroySurfaces - Destroy resources associated with surfaces. 
@@ -1340,6 +1422,7 @@ VAStatus vaBufferSetNumElements (
  * BITRATE_OVERFLOW(bit10): The peak bitrate was exceeded for this frame.
  * BITRATE_HIGH(bit11): The frame size got within the safety margin of the maximum size (VCM only)
  * AIR_MB_OVER_THRESHOLD: the number of MBs adapted to Intra MB
+ * AVC_SINGLE_NALU(bit31): indicate the segment only contains one AVC NALU
  */
 #define VA_CODED_BUF_STATUS_PICTURE_AVE_QP_MASK         0xff
 #define VA_CODED_BUF_STATUS_LARGE_SLICE_MASK            0x100
@@ -1347,6 +1430,7 @@ VAStatus vaBufferSetNumElements (
 #define VA_CODED_BUF_STATUS_BITRATE_OVERFLOW		0x400
 #define VA_CODED_BUF_STATUS_BITRATE_HIGH		0x800
 #define VA_CODED_BUF_STATUS_AIR_MB_OVER_THRESHOLD	0xff0000
+#define VA_CODED_BUF_STATUS_AVC_SINGLE_NALU	        0x80000000
 
 /*
  * device independent data structure for codedbuffer

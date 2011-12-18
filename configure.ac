@@ -64,7 +64,7 @@ AC_SUBST(LIBVA_LT_LDFLAGS)
 AC_ARG_ENABLE(glx,
               [AC_HELP_STRING([--enable-glx],
                               [build with OpenGL for X11 support])],
-              [], [enable_glx=yes])
+              [], [enable_glx=no])
 
 AC_ARG_ENABLE(dummy-driver,
               [AC_HELP_STRING([--enable-dummy-driver],

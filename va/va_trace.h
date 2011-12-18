@@ -84,7 +84,9 @@ void va_TraceCreateSurface(
     int height,
     int format,
     int num_surfaces,
-    VASurfaceID *surfaces	/* out */
+    VASurfaceID *surfaces,  /* out */
+    VASurfaceAttrib *attrib_list,
+    int num_attribs
 );
 
 void va_TraceCreateContext(
