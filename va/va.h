@@ -341,6 +341,7 @@ typedef struct _VAExternalMemoryBuffers {
     unsigned int chroma_u_offset; /* UV offset from the beginning of the memory */
     unsigned int count; /* buffer count for surface creation */
     unsigned int *buffers; /* buffer handles or user pointers */
+    void *native_window;       /*native window pointer*/
 } VAExternalMemoryBuffers;
 
 /* attribute value for VAConfigAttribRTFormat */
