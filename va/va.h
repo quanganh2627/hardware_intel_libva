@@ -1300,7 +1300,26 @@ typedef struct _VAEncSequenceParameterBufferH264
     unsigned int initial_qp;
     unsigned int min_qp;
     unsigned int basic_unit_size;
-    unsigned char vui_flag;
+
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned char    frame_cropping_flag;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned int    frame_crop_left_offset;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned int    frame_crop_right_offset;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned int    frame_crop_top_offset;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned int    frame_crop_bottom_offset;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned char   aspect_ratio_info_present_flag;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned char   vui_flag;
+    unsigned char   aspect_ratio_idc;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned int    sar_width;
+    /** \brief Same as the H.264 bitstream syntax element. */
+    unsigned int    sar_height;
 } VAEncSequenceParameterBufferH264;
 
 #define H264_LAST_PICTURE_EOSEQ     0x01 /* the last picture in the sequence */
