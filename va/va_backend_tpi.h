@@ -102,6 +102,13 @@ struct VADriverVTableTPI
                 unsigned int number_cliprects, /* number of clip rects in the clip list */
                 unsigned int flags /* de-interlacing flags */
                 );
+
+        VAStatus (*vaSetTimestampForSurface)(
+                VADisplay dpy,
+                VASurfaceID surface,
+                long long timestamp
+                );
+
 };
 
 

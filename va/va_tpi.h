@@ -113,6 +113,12 @@ VAStatus vaCreateSurfaceFromKBuf(
     unsigned int chroma_v_offset
 );
 
+VAStatus vaSetTimestampForSurface(
+    VADisplay dpy,
+    VASurfaceID surface,
+    long long timestamp
+);
+
 
 #ifdef __cplusplus
 }
