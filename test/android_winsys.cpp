@@ -1,13 +1,5 @@
 #include <ui/DisplayInfo.h>
 
-namespace android {
-    class Test {
-        public:
-                static const sp<ISurface>& getISurface(const sp<Surface>& s) {
-                            return s->getISurface();
-                }
-    };
-};
 
 #define min(a,b) (a<b?a:b)
 #define SURFACE_CREATE(client,surface_ctrl,android_surface, android_isurface, x, y, win_width, win_height) \

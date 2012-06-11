@@ -167,7 +167,6 @@ isDRI2Connected(VADriverContextP ctx, char **driver_name)
     if (!VA_DRI2QueryVersion(ctx->native_dpy, &major, &minor))
         goto err_out;
 
-
     if (!VA_DRI2Connect(ctx->native_dpy, RootWindow(ctx->native_dpy, ctx->x11_screen),
                      driver_name, &device_name))
         goto err_out;

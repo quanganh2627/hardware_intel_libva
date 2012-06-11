@@ -244,3 +244,35 @@ static int upload_surface(VADisplay va_dpy, VASurfaceID surface_id,
 
     return 0;
 }
+
+
+static int upload_surface_attrib(VADisplay va_dpy, VASurfaceID surface_id,
+                          int box_width, int row_shift,
+                          int field, unsigned int *addr)
+{
+    VAImage surface_image;
+    void *surface_p=NULL, *U_start,*V_start;
+    VAStatus va_status;
+    
+    va_status = vaDeriveImage(va_dpy,surface_id,&surface_image);
+    CHECK_VASTATUS(va_status,"vaDeriveImage");
+
+    surface_p = addr;
+    U_start = (char *)surface_p + surface_image.offsets[1];
+    V_start = (char *)surface_p + surface_image.offsets[2];
+
+    /* assume surface is planar format */
+    yuvgen_planar(surface_image.width, surface_image.height,
+                  (unsigned char *)surface_p, surface_image.pitches[0],
+                  (unsigned char *)U_start, surface_image.pitches[1],
+                  (unsigned char *)V_start, surface_image.pitches[2],
+                  (surface_image.format.fourcc==VA_FOURCC_NV12),
+                  box_width, row_shift, field);
+        
+    vaUnmapBuffer(va_dpy,surface_image.buf);
+
+    vaDestroyImage(va_dpy,surface_image.image_id);
+
+    return 0;
+}
+

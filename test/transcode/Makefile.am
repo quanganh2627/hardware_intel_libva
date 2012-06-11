@@ -20,26 +20,16 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-AUTOMAKE_OPTIONS = foreign
+bin_PROGRAMS = mpeg2transcode
 
-SUBDIRS = va dummy_drv_video pkgconfig test debian.upstream doc
+INCLUDES = -I$(top_srcdir)
 
-# Extra clean files so that maintainer-clean removes *everything*
-MAINTAINERCLEANFILES = \
-	aclocal.m4 compile config.guess config.sub \
-	configure depcomp install-sh ltmain.sh     \
-	Makefile.in missing
+TEST_LIBS = $(top_builddir)/va/$(libvacorelib) $(top_builddir)/va/$(libvabackendlib) -lX11
 
-DEB_BUILDDIR = debian.build
+mpeg2transcode_LDADD = $(TEST_LIBS)
+mpeg2transcode_SOURCES = mpeg2transcode.cpp
 
-deb:
-	@[ -d debian ] || ln -s debian.upstream debian
-	dpkg-buildpackage -rfakeroot -uc -us
-
-deb.upstream: dist
-	-mkdir -p $(DEB_BUILDDIR)
-	cd $(DEB_BUILDDIR)				&& \
-	rm -rf $(PACKAGE)-$(VERSION)			&& \
-	tar zxvf ../$(PACKAGE)-$(VERSION).tar.gz	&& \
-	cd $(PACKAGE)-$(VERSION)			&& \
-	$(MAKE) deb -f Makefile.am
+valgrind:	$(bin_PROGRAMS)
+	for a in $(bin_PROGRAMS); do \
+		valgrind --leak-check=full --show-reachable=yes .libs/$$a; \
+	done

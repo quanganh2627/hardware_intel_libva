@@ -24,7 +24,7 @@
 /*
  * Video Acceleration (VA) API Specification
  *
- * Rev. 0.30
+ * Rev. 0.32.2
  * <jonathan.bian@intel.com>
  *
  * Revision History:
@@ -61,11 +61,21 @@
  *                                        screen relative rather than source video relative.
  * rev 0.32.0 (01/13/2011 Xiang Haihao) - Add profile into VAPictureParameterBufferVC1
  *                                        update VAAPI to 0.32.0
+ * rev 0.32.1 (05/04/2011)              - Linux VA encoding API extension proposal
+ *
+ * rev 0.32.2 (07/05/2011 Jonathan Bian/Andrey Yakovenko) - Video Processing interface 
  *
  * Acknowledgements:
  *  Some concepts borrowed from XvMC and XvImage.
  *  Waldo Bastian (Intel), Matt Sottek (Intel),  Austin Yuan (Intel), and Gwenole Beauchesne (SDS)
  *  contributed to various aspects of the API.
+ */
+
+/**
+ * \file va.h
+ * \brief The Core API
+ *
+ * This file contains the \ref api_core "Core API".
  */
 
 #ifndef _VA_H_
@@ -76,6 +86,30 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * \mainpage Video Acceleration (VA) API
+ *
+ * \section intro Introduction
+ *
+ * The main motivation for VA-API (Video Acceleration API) is to
+ * enable hardware accelerated video decode and encode at various
+ * entry-points (VLD, IDCT, Motion Compensation etc.) for the
+ * prevailing coding standards today (MPEG-2, MPEG-4 ASP/H.263, MPEG-4
+ * AVC/H.264, VC-1/VMW3, and JPEG).
+ *
+ * VA-API is split into several modules:
+ * - \ref api_core
+ * - \ref api_enc_core
+ * - \ref api_enc_h264
+ * - \ref api_vpp
+ */
+
+/**
+ * \defgroup api_core Core API
+ *
+ * @{
+ */
 
 /* 
 Overview 
@@ -134,7 +168,20 @@ typedef int VAStatus;	/* Return status type from functions */
 #define VA_STATUS_ERROR_INVALID_IMAGE_FORMAT    0x00000016
 #define VA_STATUS_ERROR_DECODING_ERROR          0x00000017
 #define VA_STATUS_ERROR_ENCODING_ERROR          0x00000018
-#define VA_STATUS_ERROR_HW_BUSY			0x00000019
+/**
+ * \brief An invalid/unsupported value was supplied.
+ *
+ * This is a catch-all error code for invalid or unsupported values.
+ * e.g. value exceeding the valid range, invalid type in the context
+ * of generic attribute values.
+ */
+#define VA_STATUS_ERROR_INVALID_VALUE           0x00000019
+/** \brief An unsupported filter was supplied. */
+#define VA_STATUS_ERROR_UNSUPPORTED_FILTER      0x00000020
+/** \brief An invalid filter chain was supplied. */
+#define VA_STATUS_ERROR_INVALID_FILTER_CHAIN    0x00000021
+/** \brief Indicate HW busy (e.g. run multiple encoding simultaneously). */
+#define VA_STATUS_ERROR_HW_BUSY	                0x00000022
 #define VA_STATUS_ERROR_UNKNOWN			0xFFFFFFFF
 
 /* De-interlacing flags for vaPutSurface() */
@@ -239,8 +286,14 @@ typedef enum
     VAProfileVC1Main			= 9,
     VAProfileVC1Advanced		= 10,
     VAProfileH263Baseline		= 11,
-    VAProfileJPEGBaseline               = 12,
-    VAProfileH264ConstrainedBaseline = 13
+    VAProfileJPEGBaseline		= 12,
+    VAProfileH264ConstrainedBaseline 	= 13,
+    VAProfileH264MultiviewHigh		= 14,
+    VAProfileH264StereoHigh		= 15,
+    /** \brief Profile ID used for video processing. */
+    VAProfileNone			= 16,
+    VAProfileVP8Version0_3		= 17,
+    VAProfileMax
 } VAProfile;
 
 /* 
@@ -254,7 +307,9 @@ typedef enum
     VAEntrypointMoComp		= 4,
     VAEntrypointDeblocking	= 5,
     VAEntrypointEncSlice	= 6,	/* slice level encode */
-    VAEntrypointEncPicture 	= 7	/* pictuer encode, JPEG, etc */
+    VAEntrypointEncPicture 	= 7,	/* pictuer encode, JPEG, etc */
+    VAEntrypointVideoProc       = 10,   /**< Video pre/post-processing. */
+    VAEntrypointMax
 } VAEntrypoint;
 
 /* Currently defined configuration attribute types */
@@ -265,7 +320,80 @@ typedef enum
     VAConfigAttribSpatialClipping	= 2,
     VAConfigAttribIntraResidual		= 3,
     VAConfigAttribEncryption		= 4,
-    VAConfigAttribRateControl		= 5
+    VAConfigAttribRateControl		= 5,
+
+    /** @name Attributes for encoding */
+    /**@{*/
+    /**
+     * \brief Packed headers mode. Read/write.
+     *
+     * This attribute determines what packed headers the driver supports,
+     * through vaGetConfigAttributes(); and what packed headers the user
+     * will be providing to the driver, through vaCreateConfig(), if the
+     * driver supports those.
+     *
+     * See \c VA_ENC_PACKED_HEADER_xxx for the list of packed headers.
+     */
+    VAConfigAttribEncPackedHeaders      = 10,
+    /**
+     * \brief Interlaced mode. Read/write.
+     *
+     * This attribute determines what kind of interlaced encoding mode
+     * the driver supports.
+     *
+     * See \c VA_ENC_INTERLACED_xxx for the list of interlaced modes.
+     */
+    VAConfigAttribEncInterlaced         = 11,
+    /**
+     * \brief Maximum number of reference frames. Read-only.
+     *
+     * This attribute determines the maximum number of reference
+     * frames supported for encoding.
+     *
+     * Note: for H.264 encoding, the value represents the maximum number
+     * of reference frames for both the reference picture list 0 (bottom
+     * 16 bits) and the reference picture list 1 (top 16 bits).
+     */
+    VAConfigAttribEncMaxRefFrames       = 13,
+    /**
+     * \brief Maximum number of slices per frame. Read-only.
+     *
+     * This attribute determines the maximum number of slices the
+     * driver can support to encode a single frame.
+     */
+    VAConfigAttribEncMaxSlices          = 14,
+    /**
+     * \brief Slice structure. Read-only.
+     *
+     * This attribute determines slice structures supported by the
+     * driver for encoding. This attribute is a hint to the user so
+     * that he can choose a suitable surface size and how to arrange
+     * the encoding process of multiple slices per frame.
+     *
+     * More specifically, for H.264 encoding, this attribute
+     * determines the range of accepted values to
+     * VAEncSliceParameterBufferH264::macroblock_address and
+     * VAEncSliceParameterBufferH264::num_macroblocks.
+     *
+     * See \c VA_ENC_SLICE_STRUCTURE_xxx for the supported slice
+     * structure types.
+     */
+    VAConfigAttribEncSliceStructure     = 15,
+    /**
+     * \brief Macroblock information. Read-only.
+     *
+     * This attribute determines whether the driver supports extra
+     * encoding information per-macroblock. e.g. QP.
+     *
+     * More specifically, for H.264 encoding, if the driver returns a non-zero
+     * value for this attribute, this means the application can create
+     * additional #VAEncMacroblockParameterBufferH264 buffers referenced
+     * through VAEncSliceParameterBufferH264::macroblock_info.
+     */
+    VAConfigAttribEncMacroblockInfo     = 16,
+    /**@}*/
+
+    VAConfigAttribTypeMax
 } VAConfigAttribType;
 
 /*
@@ -279,82 +407,65 @@ typedef struct _VAConfigAttrib {
     unsigned int value; /* OR'd flags (bits) for this attribute */
 } VAConfigAttrib;
 
-typedef enum
-{
-    VAGenericValueTypeInteger,
-    VAGenericValueTypeFloat,
-    VAGenericValueTypePointer,
-} VAGenericValueType;
-
-typedef struct _VAGenericValue {
-    VAGenericValueType type;
-    union
-    {
-        int i_val;
-        float f_val;
-        void *p_val;
-    } value;
-} VAGenericValue;
-
-/*
- * Surface attributes are used for the client to query additional details
- * on the surface formats and types supported by the underlying implementation,
- * and convey its preferences to the implementation.
- */
-typedef enum
-{
-    VASurfaceAttribPixelFormats, /* value is pointer to array of fourcc */
-    VASurfaceAttribMinWidth, /* value is int */
-    VASurfaceAttribMaxWidth, /* value is int */
-    VASurfaceAttribMinHeight, /* value is int */
-    VASurfaceAttribMaxHeight, /* value is int */
-    VASurfaceAttribAlignment, /* value is int (bytes) */
-    VASurfaceAttribNativeHandle /* value is void *p_val */
-} VASurfaceAttribType;
-
-/* value for "flags" in VASurfaceAttrib */
-#define VA_SURFACE_ATTRIB_NOT_SUPPORTED	0x00000000 /* not supported */
-#define VA_SURFACE_ATTRIB_GETTABLE	0x00000001 /* value is gettable */
-#define VA_SURFACE_ATTRIB_SETTABLE	0x00000002 /* value is settable */
-
-typedef struct _VASurfaceAttrib {
-    VASurfaceAttribType type;
-    unsigned int flags;
-    VAGenericValue value;
-} VASurfaceAttrib;
-
-typedef enum {
-    VAExternalMemoryAndroidGrallocBuffer, /* the memory is from Android Gralloc memory */
-    VAExternalMemoryKernelDRMBufffer, /* the memory is from kernel DRM buffers */
-    VAExternalMemoryUserPointer, /* the memory is malloc-ed and has a user pointer */
-} VAExternalMemoryType;
-
-typedef struct _VAExternalMemoryBuffers {
-    VAExternalMemoryType type;
-    unsigned int width;
-    unsigned int height;
-    unsigned int pixel_format; /* buffer format */
-    unsigned int luma_stride; /* luma stride, could be width aligned with a special value */
-    unsigned int chroma_u_stride; /* chroma stride */
-    unsigned int chroma_v_stride;
-    unsigned int luma_offset; /* could be 0 */
-    unsigned int chroma_u_offset; /* UV offset from the beginning of the memory */
-    unsigned int count; /* buffer count for surface creation */
-    unsigned int *buffers; /* buffer handles or user pointers */
-    void *native_window;       /*native window pointer*/
-} VAExternalMemoryBuffers;
-
 /* attribute value for VAConfigAttribRTFormat */
 #define VA_RT_FORMAT_YUV420	0x00000001	
 #define VA_RT_FORMAT_YUV422	0x00000002
 #define VA_RT_FORMAT_YUV444	0x00000004
 #define VA_RT_FORMAT_PROTECTED	0x80000000
 
-/* attribute value for VAConfigAttribRateControl */
-#define VA_RC_NONE	0x00000001	
-#define VA_RC_CBR	0x00000002	
-#define VA_RC_VBR	0x00000004	
-#define VA_RC_VCM	0x00000008 /* video conference mode */
+/** @name Attribute values for VAConfigAttribRateControl */
+/**@{*/
+/** \brief Driver does not support any form of rate control. */
+#define VA_RC_NONE                      0x00000001
+/** \brief Constant bitrate. */
+#define VA_RC_CBR                       0x00000002
+/** \brief Variable bitrate. */
+#define VA_RC_VBR                       0x00000004
+/** \brief Video conference mode. */
+#define VA_RC_VCM                       0x00000008
+/** \brief Constant QP. */
+#define VA_RC_CQP                       0x00000010
+/** \brief Variable bitrate with peak rate higher than average bitrate. */
+#define VA_RC_VBR_CONSTRAINED           0x00000020
+/**@}*/
+
+/** @name Attribute values for VAConfigAttribEncPackedHeaders */
+/**@{*/
+/** \brief Driver does not support any packed headers mode. */
+#define VA_ENC_PACKED_HEADER_NONE       0x00000000
+/** \brief Driver supports packed sequence headers. e.g. SPS for H.264. */
+#define VA_ENC_PACKED_HEADER_SEQUENCE   0x00000001
+/** \brief Driver supports packed picture headers. e.g. PPS for H.264. */
+#define VA_ENC_PACKED_HEADER_PICTURE    0x00000002
+/** \brief Driver supports packed slice headers. e.g. \c slice_header() for H.264. */
+#define VA_ENC_PACKED_HEADER_SLICE      0x00000004
+/** \brief Driver supports misc packed headers. e.g. SEI for H.264. */
+#define VA_ENC_PACKED_HEADER_MISC       0x00000008
+/**@}*/
+
+/** @name Attribute values for VAConfigAttribEncInterlaced */
+/**@{*/
+/** \brief Driver does not support interlaced coding. */
+#define VA_ENC_INTERLACED_NONE          0x00000000
+/** \brief Driver supports interlaced frame coding. */
+#define VA_ENC_INTERLACED_FRAME         0x00000001
+/** \brief Driver supports interlaced field coding. */
+#define VA_ENC_INTERLACED_FIELD         0x00000002
+/** \brief Driver supports macroblock adaptive frame field coding. */
+#define VA_ENC_INTERLACED_MBAFF         0x00000004
+/** \brief Driver supports picture adaptive frame field coding. */
+#define VA_ENC_INTERLACED_PAFF          0x00000008
+/**@}*/
+
+/** @name Attribute values for VAConfigAttribEncSliceStructure */
+/**@{*/
+/** \brief Driver supports an arbitrary number of rows per slice. */
+#define VA_ENC_SLICE_STRUCTURE_ARBITRARY_ROWS           0x00000000
+/** \brief Driver supports a power-of-two number of rows per slice. */
+#define VA_ENC_SLICE_STRUCTURE_POWER_OF_TWO_ROWS        0x00000001
+/** \brief Driver supports an arbitrary number of rows per slice. */
+#define VA_ENC_SLICE_STRUCTURE_ARBITRARY_MACROBLOCKS    0x00000002
+/**@}*/
 
 /*
  * if an attribute is not applicable for a given
@@ -462,21 +573,6 @@ VAStatus vaQueryConfigAttributes (
     int *num_attribs 		/* out */
 );
 
-/* Get maximum number of surface attributs supported by the implementation */
-int vaMaxNumSurfaceAttributes (
-    VADisplay dpy
-);
-
-/*
- * Query the implementation on what surface attributes are supported
- * depending on the intended usage for the surfaces.
- */
-VAStatus vaQuerySurfaceAttributes (
-    VADisplay dpy,
-    VAConfigID config,
-    VASurfaceAttrib *attrib_list, /* in/out */
-    int num_attribs
-);
 
 /*
  * Contexts and Surfaces
@@ -501,26 +597,133 @@ typedef VAGenericID VASurfaceID;
 #define VA_INVALID_ID		0xffffffff
 #define VA_INVALID_SURFACE	VA_INVALID_ID
 
-/* 
- * vaCreateSurfaces - Create an array of surfaces used for decode and display  
- *  dpy: display
- *  width: surface width
- *  height: surface height
- *  format: VA_RT_FORMAT_YUV420, VA_RT_FORMAT_YUV422 or VA_RT_FORMAT_YUV444
- *  num_surfaces: number of surfaces to be created
- *  surfaces: array of surfaces created upon return
- *  attrib_list: attributes for the surfaces to be created
- *  num_attribs: number of attributes in attrib_list
+/** \brief Generic value types. */
+typedef enum  {
+    VAGenericValueTypeInteger = 1,      /**< 32-bit signed integer. */
+    VAGenericValueTypeFloat,            /**< 32-bit floating-point value. */
+    VAGenericValueTypePointer,          /**< Generic pointer type */
+    VAGenericValueTypeFunc              /**< Pointer to function */
+} VAGenericValueType;
+
+/** \brief Generic function type. */
+typedef void (*VAGenericFunc)(void);
+
+/** \brief Generic value. */
+typedef struct _VAGenericValue {
+    /** \brief Value type. See #VAGenericValueType. */
+    VAGenericValueType  type;
+    /** \brief Value holder. */
+    union {
+        /** \brief 32-bit signed integer. */
+        int             i;
+        /** \brief 32-bit float. */
+        float           f;
+        /** \brief Generic pointer. */
+        void           *p;
+        /** \brief Pointer to function. */
+        VAGenericFunc   fn;
+    }                   value;
+} VAGenericValue;
+
+/** @name Surface attribute flags */
+/**@{*/
+/** \brief Surface attribute is not supported. */
+#define VA_SURFACE_ATTRIB_NOT_SUPPORTED 0x00000000
+/** \brief Surface attribute can be got through vaQuerySurfaceAttributes(). */
+#define VA_SURFACE_ATTRIB_GETTABLE      0x00000001
+/** \brief Surface attribute can be set through vaCreateSurfaces(). */
+#define VA_SURFACE_ATTRIB_SETTABLE      0x00000002
+/**@}*/
+
+/** \brief Surface attribute types. */
+typedef enum {
+    VASurfaceAttribNone = 0,
+    /**
+     * \brief Pixel format (fourcc).
+     *
+     * The value is meaningful as input to vaQuerySurfaceAttributes().
+     * If zero, the driver returns the optimal pixel format for the
+     * specified config. Otherwise, if non-zero, the value represents
+     * a pixel format (FOURCC) that is kept as is on output, if the
+     * driver supports it. Otherwise, the driver sets the value to
+     * zero and drops the \c VA_SURFACE_ATTRIB_SETTABLE flag.
+     */
+    VASurfaceAttribPixelFormat,
+    /** \brief Minimal width in pixels (int, read/write). */
+    VASurfaceAttribMinWidth,
+    /** \brief Maximal width in pixels (int, read-only). */
+    VASurfaceAttribMaxWidth,
+    /** \brief Minimal height in pixels (int, read-only). */
+    VASurfaceAttribMinHeight,
+    /** \brief Maximal height in pixels (int, read-only). */
+    VASurfaceAttribMaxHeight,
+    /** \brief Number of surface attributes. */
+    VASurfaceAttribCount
+} VASurfaceAttribType;
+
+/** \brief Surface attribute. */
+typedef struct _VASurfaceAttrib {
+    /** \brief Type. */
+    VASurfaceAttribType type;
+    /** \brief Flags. See "Surface attribute flags". */
+    unsigned int        flags;
+    /** \brief Value. See "Surface attribute types" for the expected types. */
+    VAGenericValue      value;
+} VASurfaceAttrib;
+
+/**
+ * \brief Get surface attributes for the supplied config.
+ *
+ * This function retrieves the surface attributes matching the supplied
+ * config. The caller shall provide an \c attrib_list with all attributes
+ * to be retrieved. Upon successful return, the attributes in \c attrib_list
+ * are updated with the requested value. Unknown attributes or attributes
+ * that are not supported for the given config will have their \c flags
+ * field set to \c VA_SURFACE_ATTRIB_NOT_SUPPORTED.
+ *
+ * @param[in] dpy               the VA display
+ * @param[in] config            the config identifying a codec or a video
+ *     processing pipeline
+ * @param[in,out] attrib_list   the list of attributes on input, with at
+ *     least \c type fields filled in, and possibly \c value fields whenever
+ *     necessary. The updated list of attributes and flags on output
+ * @param[in] num_attribs       the number of attributes supplied in the
+ *     \c attrib_list array
  */
-VAStatus vaCreateSurfaces (
-    VADisplay dpy,
-    int width,
-    int height,
-    int format,
-    int num_surfaces,
-    VASurfaceID *surfaces,	/* out */
-    VASurfaceAttrib *attrib_list,
-    int num_attribs
+VAStatus
+vaGetSurfaceAttributes(
+    VADisplay           dpy,
+    VAConfigID          config,
+    VASurfaceAttrib    *attrib_list,
+    unsigned int        num_attribs
+);
+
+/**
+ * \brief Creates an array of surfaces
+ *
+ * Creates an array of surfaces. The optional list of attributes shall
+ * be constructed and verified through vaGetSurfaceAttributes().
+ *
+ * @param[in] dpy               the VA display
+ * @param[in] format            the desired surface format. See \c VA_RT_FORMAT_*
+ * @param[in] width             the surface width
+ * @param[in] height            the surface height
+ * @param[out] surfaces         the array of newly created surfaces
+ * @param[in] num_surfaces      the number of surfaces to create
+ * @param[in] attrib_list       the list of (optional) attributes, or \c NULL
+ * @param[in] num_attribs       the number of attributes supplied in
+ *     \c attrib_list, or zero
+ */
+VAStatus
+vaCreateSurfaces(
+    VADisplay           dpy,
+    unsigned int        format,
+    unsigned int        width,
+    unsigned int        height,
+    VASurfaceID        *surfaces,
+    unsigned int        num_surfaces,
+    VASurfaceAttrib    *attrib_list,
+    unsigned int        num_attribs
 );
     
 /*
@@ -595,15 +798,39 @@ typedef enum
     VAImageBufferType			= 9,
     VAProtectedSliceDataBufferType	= 10,
     VAQMatrixBufferType                 = 11,
+    VAHuffmanTableBufferType            = 12,
+    VAProbabilityBufferType             = 13,
 /* Following are encode buffer types */
     VAEncCodedBufferType		= 21,
     VAEncSequenceParameterBufferType	= 22,
     VAEncPictureParameterBufferType	= 23,
     VAEncSliceParameterBufferType	= 24,
-    VAEncH264VUIBufferType		= 25,
-    VAEncH264SEIBufferType		= 26,
+    VAEncPackedHeaderParameterBufferType = 25,
+    VAEncPackedHeaderDataBufferType     = 26,
     VAEncMiscParameterBufferType	= 27,
-    VABufferTypeMax                     = 0xff
+    VAEncMacroblockParameterBufferType	= 28,
+/* Following are video processing buffer types */
+    /**
+     * \brief Video processing pipeline parameter buffer.
+     *
+     * This buffer describes the video processing pipeline. See
+     * #VAProcPipelineParameterBuffer for details.
+     */
+    VAProcPipelineParameterBufferType   = 41,
+    /**
+     * \brief Video filter parameter buffer.
+     *
+     * This buffer describes the video filter parameters. All buffers
+     * inherit from #VAProcFilterParameterBufferBase, thus including
+     * a unique filter buffer type.
+     *
+     * The default buffer used by most filters is #VAProcFilterParameterBuffer.
+     * Filters requiring advanced parameters include, but are not limited to,
+     * deinterlacing (#VAProcFilterParameterBufferDeinterlacing),
+     * color balance (#VAProcFilterParameterBufferColorBalance), etc.
+     */
+    VAProcFilterParameterBufferType     = 42,
+    VABufferTypeMax
 } VABufferType;
 
 typedef enum
@@ -612,8 +839,33 @@ typedef enum
     VAEncMiscParameterTypeRateControl  	= 1,
     VAEncMiscParameterTypeMaxSliceSize	= 2,
     VAEncMiscParameterTypeAIR    	= 3,
-    VAEncMiscParameterTypeHRD		= 4
+    /** \brief Buffer type used to express a maximum frame size (in bits). */
+    VAEncMiscParameterTypeMaxFrameSize  = 4,
+    /** \brief Buffer type used for HRD parameters. */
+    VAEncMiscParameterTypeHRD           = 5,
 } VAEncMiscParameterType;
+
+/** \brief Packed header type. */
+typedef enum {
+    /** \brief Packed sequence header. */
+    VAEncPackedHeaderSequence   = 1,
+    /** \brief Packed picture header. */
+    VAEncPackedHeaderPicture    = 2,
+    /** \brief Packed slice header. */
+    VAEncPackedHeaderSlice      = 3,
+    /** \brief Misc packed header. See codec-specific definitions. */
+    VAEncPackedHeaderMiscMask   = 0x80000000,
+} VAEncPackedHeaderType;
+
+/** \brief Packed header parameter. */
+typedef struct _VAEncPackedHeaderParameterBuffer {
+    /** Type of the packed header buffer. See #VAEncPackedHeaderType. */
+    unsigned int                type;
+    /** \brief Size of the #VAEncPackedHeaderDataBuffer in bits. */
+    unsigned int                bit_length;
+    /** \brief Flag: buffer contains start code emulation prevention bytes? */
+    unsigned char               has_emulation_bytes;
+} VAEncPackedHeaderParameterBuffer;
 
 /*
  *  For application, e.g. set a new bitrate
@@ -638,16 +890,25 @@ typedef struct _VAEncMiscParameterBuffer
     unsigned int data[0];
 } VAEncMiscParameterBuffer;
 
+
+/** \brief Rate control parameters */
 typedef struct _VAEncMiscParameterRateControl
 {
-    unsigned int bits_per_second; /* this is the maximum bit-rate to be constrained by the rate control implementation */
-    unsigned int target_percentage; /* this is the bit-rate the rate control is targeting, as a percentage of the maximum bit-rate */
-                                    /* for example if target_percentage is 95 then the rate control will target a bit-rate that is */
-                                    /* 95% of the maximum bit-rate */
-    unsigned int window_size; /* windows size in milliseconds. For example if this is set to 500, then the rate control will guarantee the */
-                              /* target bit-rate over a 500 ms window */
-    unsigned int initial_qp;  /* initial QP at I frames */
+    /* this is the maximum bit-rate to be constrained by the rate control implementation */
+    unsigned int bits_per_second;
+    /* this is the bit-rate the rate control is targeting, as a percentage of the maximum
+     * bit-rate for example if target_percentage is 95 then the rate control will target
+     * a bit-rate that is 95% of the maximum bit-rate
+     */
+    unsigned int target_percentage;
+    /* windows size in milliseconds. For example if this is set to 500,
+     * then the rate control will guarantee the target bit-rate over a 500 ms window
+     */
+    unsigned int window_size;
+    /* initial QP at I frames */
+    unsigned int initial_qp;
     unsigned int min_qp;
+    unsigned int basic_unit_size;
     union
     {
         struct
@@ -655,7 +916,6 @@ typedef struct _VAEncMiscParameterRateControl
             unsigned int reset : 1;
             unsigned int disable_frame_skip : 1; /* Disable frame skip in rate control mode */
             unsigned int disable_bit_stuffing : 1; /* Disable bit stuffing in rate control mode */
-            unsigned int : 29;
         } bits;
         unsigned int value;
     } rc_flags;
@@ -685,9 +945,25 @@ typedef struct _VAEncMiscParameterAIR
 
 typedef struct _VAEncMiscParameterHRD
 {
-     unsigned int buffer_size; /* in bits */
-     unsigned int initial_buffer_fullness; /* in bits */
+    unsigned int initial_buffer_fullness;       /* in bits */
+    unsigned int buffer_size;                   /* in bits */
 } VAEncMiscParameterHRD;
+
+/**
+ * \brief Defines a maximum frame size (in bits).
+ *
+ * This misc parameter buffer defines the maximum size of a frame (in
+ * bits). The encoder will try to make sure that each frame does not
+ * exceed this size. Otherwise, if the frame size exceeds this size,
+ * the \c status flag of #VACodedBufferSegment will contain
+ * #VA_CODED_BUF_STATUS_FRAME_SIZE_OVERFLOW.
+ */
+typedef struct _VAEncMiscParameterBufferMaxFrameSize {
+    /** \brief Type. Shall be set to #VAEncMiscParameterTypeMaxFrameSize. */
+    VAEncMiscParameterType      type;
+    /** \brief Maximum size of a frame (in bits). */
+    unsigned int                max_frame_size;
+} VAEncMiscParameterBufferMaxFrameSize;
 
 /* 
  * There will be cases where the bitstream buffer will not have enough room to hold
@@ -1225,9 +1501,20 @@ typedef struct _VAIQMatrixBufferH264
 typedef struct _VASliceParameterBufferH264
 {
     unsigned int slice_data_size;/* number of bytes in the slice data buffer for this slice */
-    unsigned int slice_data_offset;/* the offset to the NAL start code for this slice */
+    /** \brief Byte offset to the NAL Header Unit for this slice. */
+    unsigned int slice_data_offset;
     unsigned int slice_data_flag; /* see VA_SLICE_DATA_FLAG_XXX defintions */
-    unsigned short slice_data_bit_offset; /* bit offset from NAL start code to the beginning of slice data */
+    /**
+     * \brief Bit offset from NAL Header Unit to the begining of slice_data().
+     *
+     * This bit offset is relative to and includes the NAL unit byte
+     * and represents the number of bits parsed in the slice_header()
+     * after the removal of any emulation prevention bytes in
+     * there. However, the slice data buffer passed to the hardware is
+     * the original bitstream, thus including any emulation prevention
+     * bytes.
+     */
+    unsigned short slice_data_bit_offset;
     unsigned short first_mb_in_slice;
     unsigned char slice_type;
     unsigned char direct_spatial_mv_pred_flag;
@@ -1281,58 +1568,6 @@ typedef struct _VAEncSliceParameterBuffer
         unsigned int value;
     } slice_flags;
 } VAEncSliceParameterBuffer;
-
-/****************************
- * H.264 specific encode data structures
- ****************************/
-
-typedef struct _VAEncSequenceParameterBufferH264
-{
-    unsigned char seq_parameter_set_id;
-    unsigned char level_idc;
-    unsigned int intra_period;
-    unsigned int intra_idr_period;
-    unsigned int max_num_ref_frames;
-    unsigned int picture_width_in_mbs;
-    unsigned int picture_height_in_mbs;
-    unsigned int bits_per_second;
-    unsigned int frame_rate;
-    unsigned int initial_qp;
-    unsigned int min_qp;
-    unsigned int basic_unit_size;
-
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned char    frame_cropping_flag;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned int    frame_crop_left_offset;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned int    frame_crop_right_offset;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned int    frame_crop_top_offset;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned int    frame_crop_bottom_offset;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned char   aspect_ratio_info_present_flag;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned char   vui_flag;
-    unsigned char   aspect_ratio_idc;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned int    sar_width;
-    /** \brief Same as the H.264 bitstream syntax element. */
-    unsigned int    sar_height;
-} VAEncSequenceParameterBufferH264;
-
-#define H264_LAST_PICTURE_EOSEQ     0x01 /* the last picture in the sequence */
-#define H264_LAST_PICTURE_EOSTREAM  0x02 /* the last picture in the stream */
-typedef struct _VAEncPictureParameterBufferH264
-{
-    VASurfaceID reference_picture;
-    VASurfaceID reconstructed_picture;
-    VABufferID coded_buf;
-    unsigned short picture_width;
-    unsigned short picture_height;
-    unsigned char last_picture;
-} VAEncPictureParameterBufferH264;
 
 /****************************
  * H.263 specific encode data structures
@@ -1442,26 +1677,59 @@ VAStatus vaBufferSetNumElements (
  * BITRATE_OVERFLOW(bit10): The peak bitrate was exceeded for this frame.
  * BITRATE_HIGH(bit11): The frame size got within the safety margin of the maximum size (VCM only)
  * AIR_MB_OVER_THRESHOLD: the number of MBs adapted to Intra MB
- * AVC_SINGLE_NALU(bit31): indicate the segment only contains one AVC NALU
  */
 #define VA_CODED_BUF_STATUS_PICTURE_AVE_QP_MASK         0xff
 #define VA_CODED_BUF_STATUS_LARGE_SLICE_MASK            0x100
 #define VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK         0x200
 #define VA_CODED_BUF_STATUS_BITRATE_OVERFLOW		0x400
 #define VA_CODED_BUF_STATUS_BITRATE_HIGH		0x800
+/**
+ * \brief The frame has exceeded the maximum requested size.
+ *
+ * This flag indicates that the encoded frame size exceeds the value
+ * specified through a misc parameter buffer of type
+ * #VAEncMiscParameterTypeMaxFrameSize.
+ */
+#define VA_CODED_BUF_STATUS_FRAME_SIZE_OVERFLOW         0x1000
 #define VA_CODED_BUF_STATUS_AIR_MB_OVER_THRESHOLD	0xff0000
-#define VA_CODED_BUF_STATUS_AVC_SINGLE_NALU	        0x80000000
 
-/*
- * device independent data structure for codedbuffer
+/**
+ * \brief The coded buffer segment contains a single NAL unit. 
+ *
+ * This flag indicates that the coded buffer segment contains a
+ * single NAL unit. This flag might be useful to the user for 
+ * processing the coded buffer.
+ */
+#define VA_CODED_BUF_STATUS_SINGLE_NALU                 0x10000000	
+
+/**
+ * \brief Coded buffer segment.
+ *
+ * #VACodedBufferSegment is an element of a linked list describing
+ * some information on the coded buffer. The coded buffer segment
+ * could contain either a single NAL unit, or more than one NAL unit. 
+ * It is recommended (but not required) to return a single NAL unit 
+ * in a coded buffer segment, and the implementation should set the 
+ * VA_CODED_BUF_STATUS_SINGLE_NALU status flag if that is the case.
  */
 typedef  struct _VACodedBufferSegment  {
-    unsigned int size;/* size of the data buffer in the coded buffer segment, in bytes */
-    unsigned int bit_offset; /* bit offset into the data buffer where valid bitstream data begins */
-    unsigned int status; /* status set by the driver on the coded buffer*/
-    unsigned int reserved; /* for future use */
-    void *buf; /* pointer to the beginning of the data buffer in the coded buffer segment */
-    void *next; /* pointer to the next VACodedBufferSegment */
+    /**
+     * \brief Size of the data buffer in this segment (in bytes).
+     */
+    unsigned int        size;
+    /** \brief Bit offset into the data buffer where the video data starts. */
+    unsigned int        bit_offset;
+    /** \brief Status set by the driver. See \c VA_CODED_BUF_STATUS_*. */
+    unsigned int        status;
+    /** \brief Reserved for future use. */
+    unsigned int        reserved;
+    /** \brief Pointer to the start of the data buffer. */
+    void               *buf;
+    /**
+     * \brief Pointer to the next #VACodedBufferSegment element,
+     * or \c NULL if there is none.
+     */
+    void               *next;
 } VACodedBufferSegment;
      
 /*
@@ -1627,6 +1895,8 @@ VAStatus vaQuerySurfaceError(
 #define VA_FOURCC_YV12          0x32315659
 #define VA_FOURCC_P208          0x38303250
 #define VA_FOURCC_IYUV          0x56555949
+#define VA_FOURCC_YV24          0x34325659
+#define VA_FOURCC_YV32          0x32335659
 
 /* byte order */
 #define VA_LSB_FIRST		1
@@ -1954,15 +2224,6 @@ typedef struct _VARectangle
  * attributes are supported by the driver, and then set the appropriate attributes
  * before calling vaPutSurface()
  */
-/* PowerVR IEP Lite attributes */
-typedef enum
-{
-    VADISPLAYATTRIB_BLE_OFF              = 0x00,
-    VADISPLAYATTRIB_BLE_LOW,
-    VADISPLAYATTRIB_BLE_MEDIUM,
-    VADISPLAYATTRIB_BLE_HIGH,
-    VADISPLAYATTRIB_BLE_NONE,
-} VADisplayAttribBLEMode;
 
 /* attribute value for VADisplayAttribRotation   */
 #define VA_ROTATION_NONE        0x00000000
@@ -1999,26 +2260,9 @@ typedef enum
      * also it will blend with the decoded video color
      */
     VADisplayAttribBackgroundColor      = 4,
-    /*
-     * this is a gettable only attribute. For some implementations that use the
-     * hardware overlay, after PutSurface is called, the surface can not be    
-     * re-used until after the subsequent PutSurface call. If this is the case 
-     * then the value for this attribute will be set to 1 so that the client   
-     * will not attempt to re-use the surface right after returning from a call
-     * to PutSurface.
-     *
-     * Don't use it, use flag VASurfaceDisplaying of vaQuerySurfaceStatus since
-     * driver may use overlay or GPU alternatively
-     */
-    VADisplayAttribDirectSurface       = 5,
     VADisplayAttribRotation            = 6,	
     VADisplayAttribOutofLoopDeblock    = 7,
 
-    /* PowerVR IEP Lite specific attributes */
-    VADisplayAttribBLEBlackMode        = 8,
-    VADisplayAttribBLEWhiteMode        = 9,
-    VADisplayAttribBlueStretch         = 10,
-    VADisplayAttribSkinColorCorrection = 11,
     /*
      * For type VADisplayAttribCSCMatrix, "value" field is a pointer to the color
      * conversion matrix. Each element in the matrix is float-point
@@ -2115,6 +2359,8 @@ VAStatus vaSetDisplayAttributes (
     VADisplayAttribute *attr_list,
     int num_attributes
 );
+
+/**@}*/
 
 #ifdef __cplusplus
 }

@@ -121,11 +121,12 @@ static VAStatus va_DisplayContextGetDriverName (
     } devices[] = {
         { 0x8086, 0x4100, "pvr" },
         { 0x8086, 0x0130, "pvr" },
+        { 0x1010, 0x1cf2, "pvr" },
         { 0x0,    0x0,    "\0" },
     };
 
     memset(dri_state, 0, sizeof(*dri_state));
-    dri_state->fd = open_device(DEVICE_NAME);
+    dri_state->fd = open_device((char *)DEVICE_NAME);
     
     if (dri_state->fd < 0) {
         fprintf(stderr,"can't open DRM devices\n");
@@ -160,6 +161,7 @@ static VAStatus va_DisplayContextGetDriverName (
     } devices[] = {
         { 0x8086, 0x4100, "pvr" },
         { 0x8086, 0x0130, "pvr" },
+        { 0x1010, 0x1cf2, "pvr" },
         { 0x0,    0x0,    "\0" },
     };
 
@@ -290,7 +292,10 @@ VAStatus vaPutSurface (
 
     if (fool_postp)
         return VA_STATUS_SUCCESS;
-
+/*
+    if (draw == NULL)
+        return VA_STATUS_ERROR_UNKNOWN;
+*/
     CHECK_DISPLAY(dpy);
     ctx = CTX(dpy);
 
@@ -301,5 +306,25 @@ VAStatus vaPutSurface (
     return ctx->vtable->vaPutSurface( ctx, surface, static_cast<void*>(&draw), srcx, srcy, srcw, srch, 
                                      destx, desty, destw, desth,
                                      cliprects, number_cliprects, flags );
+}
+#else
+VAStatus vaPutSurface (
+    VADisplay dpy,
+    VASurfaceID surface,
+    void  *draw,
+    short srcx,
+    short srcy,
+    unsigned short srcw,
+    unsigned short srch,
+    short destx,
+    short desty,
+    unsigned short destw,
+    unsigned short desth,
+    VARectangle *cliprects, /* client supplied clip list */
+    unsigned int number_cliprects, /* number of clip rects in the clip list */
+    unsigned int flags /* de-interlacing flags */
+)
+{
+    return VA_STATUS_SUCCESS;
 }
 #endif

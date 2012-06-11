@@ -86,16 +86,14 @@ struct VADriverVTable
 		int *num_attribs		/* out */
 	);
 
-    VAStatus (*vaCreateSurfaces) (
-        VADriverContextP ctx,
-        int width,
-        int height,
-        int format,
-        int num_surfaces,
-        VASurfaceID *surfaces,  /* out */
-        VASurfaceAttrib *attrib_list,
-        int num_attribs
-    );
+	VAStatus (*vaCreateSurfaces) (
+		VADriverContextP ctx,
+		int width,
+		int height,
+		int format,
+		int num_surfaces,
+		VASurfaceID *surfaces		/* out */
+	);
 
 	VAStatus (*vaDestroySurfaces) (
 		VADriverContextP ctx,
@@ -379,6 +377,26 @@ struct VADriverVTable
 		VADriverContextP ctx,
                 VASurfaceID surface
         );
+
+        VAStatus
+        (*vaGetSurfaceAttributes)(
+            VADriverContextP    dpy,
+            VAConfigID          config,
+            VASurfaceAttrib    *attrib_list,
+            unsigned int        num_attribs
+        );
+
+        VAStatus
+        (*vaCreateSurfaces2)(
+            VADriverContextP    ctx,
+            unsigned int        format,
+            unsigned int        width,
+            unsigned int        height,
+            VASurfaceID        *surfaces,
+            unsigned int        num_surfaces,
+            VASurfaceAttrib    *attrib_list,
+            unsigned int        num_attribs
+        );
 };
 
 struct VADriverContext
@@ -436,7 +454,14 @@ struct VADriverContext
     void *dri_state;
     void *glx;				/* opaque for GLX code */
 
-    unsigned long reserved[45];         /* reserve for future add-ins, decrease the subscript accordingly */
+    /**
+     * \brief The VA/VPP implementation hooks.
+     *
+     * This structure is allocated from libva with calloc().
+     */
+    struct VADriverVTableVPP *vtable_vpp;
+
+    unsigned long reserved[44];         /* reserve for future add-ins, decrease the subscript accordingly */
 };
 
 #define VA_DISPLAY_MAGIC 0x56414430 /* VAD0 */

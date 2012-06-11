@@ -44,6 +44,7 @@ if (va_status != VA_STATUS_SUCCESS) {                                   \
 static char * profile_string(VAProfile profile)
 {
     switch (profile) {
+            case VAProfileNone: return "VAProfileNone";
             case VAProfileMPEG2Simple: return "VAProfileMPEG2Simple";
             case VAProfileMPEG2Main: return "VAProfileMPEG2Main";
             case VAProfileMPEG4Simple: return "VAProfileMPEG4Simple";
@@ -57,6 +58,9 @@ static char * profile_string(VAProfile profile)
             case VAProfileVC1Advanced: return "VAProfileVC1Advanced";
             case VAProfileH263Baseline: return "VAProfileH263Baseline";
             case VAProfileH264ConstrainedBaseline: return "VAProfileH264ConstrainedBaseline";
+            case VAProfileJPEGBaseline: return "VAProfileJPEGBaseline";
+            default:
+                break;
     }
     return "<unknown profile>";
 }
@@ -71,6 +75,10 @@ static char * entrypoint_string(VAEntrypoint entrypoint)
             case VAEntrypointMoComp:return "VAEntrypointMoComp";
             case VAEntrypointDeblocking:return "VAEntrypointDeblocking";
             case VAEntrypointEncSlice:return "VAEntrypointEncSlice";
+            case VAEntrypointEncPicture:return "VAEntrypointEncPicture";
+            case VAEntrypointVideoProc:return "VAEntrypointVideoProc";
+            default:
+                break;
     }
     return "<unknown entrypoint>";
 }
@@ -94,7 +102,7 @@ int main(int argc, const char* argv[])
       name = argv[0];
 
 #ifndef ANDROID
-  dpy = XOpenDisplay(":0.0");
+  dpy = XOpenDisplay(NULL);
 #else
   dpy = (Display*)malloc(sizeof(Display));
 #endif
@@ -114,13 +122,14 @@ int main(int argc, const char* argv[])
   va_status = vaInitialize(va_dpy, &major_version, &minor_version);
   CHECK_VASTATUS(va_status, "vaInitialize", 3);
   
-  printf("%s: VA API version: %d.%d\n", name, major_version, minor_version);
+  printf("%s: VA-API version: %d.%d (libva %s)\n",
+         name, major_version, minor_version, LIBVA_VERSION_S);
 
   driver = vaQueryVendorString(va_dpy);
   printf("%s: Driver version: %s\n", name, driver ? driver : "<unknown>");
 
   printf("%s: Supported profile and entrypoints\n", name);
-  for	(profile = VAProfileMPEG2Simple; profile <= VAProfileH263Baseline; profile++) {
+  for	(profile = VAProfileNone; profile <= VAProfileH264ConstrainedBaseline; profile++) {
       char *profile_str;
 
       va_status = vaQueryConfigEntrypoints(va_dpy, profile, entrypoints, 

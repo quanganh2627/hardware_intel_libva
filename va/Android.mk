@@ -49,9 +49,14 @@ LOCAL_C_INCLUDES += \
 LOCAL_COPY_HEADERS := \
 	va.h \
 	va_version.h \
+	va_enc.h \
+	va_enc_h264.h \
 	va_backend.h \
-	va_version.h.in \
-	x11/va_dricommon.h 
+	x11/va_dricommon.h \
+	va_vpp.h \
+	va_dec_vp8.h \
+	va_dec_jpeg.h \
+	va_backend_vpp.h
 
 LOCAL_COPY_HEADERS_TO := libva/va
 
@@ -62,14 +67,12 @@ LOCAL_SHARED_LIBRARIES := libdl libdrm libcutils liblog
 
 include $(BUILD_SHARED_LIBRARY)
 
-intermediates := $(local-intermediates-dir)
-GEN := $(intermediates)/va_version.h
-$(GEN): PRIVATE_GEN_VERSION := $(LOCAL_PATH)/../build/gen_version.sh
-$(GEN): PRIVATE_INPUT_FILE := $(LOCAL_PATH)/va_version.h.in
-$(GEN): PRIVATE_CUSTOM_TOOL = sh $(PRIVATE_GEN_VERSION) $(LOCAL_PATH)/.. $(PRIVATE_INPUT_FILE) > $@
-$(GEN): $(LOCAL_PATH)/va_version.h
+GEN := $(LOCAL_PATH)/va_version.h
+$(GEN): SCRIPT := $(LOCAL_PATH)/../build/gen_version.sh
+$(GEN): PRIVATE_PATH := $(LOCAL_PATH)
+$(GEN): PRIVATE_CUSTOM_TOOL = sh $(SCRIPT) $(PRIVATE_PATH)/.. $(PRIVATE_PATH)/va_version.h.in > $@
+$(GEN): $(LOCAL_PATH)/%.h : $(LOCAL_PATH)/%.h.in $(SCRIPT) $(LOCAL_PATH)/../configure.ac
 	$(transform-generated-source)
-
 LOCAL_GENERATED_SOURCES += $(GEN) 
 
 # For libva-android
