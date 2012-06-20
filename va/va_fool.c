@@ -262,7 +262,7 @@ static int va_FoolFillCodedBufEnc(int idx)
 
     /* try file_name.file_count, if fail, try file_name.file_count-- */
     for (i=0; i<=1; i++) {
-        sprintf(file_name, "%s.%d",
+        snprintf(file_name, 1024, "%s.%d",
                 fool_context[idx].fn_enc,
                 fool_context[idx].file_count);
 

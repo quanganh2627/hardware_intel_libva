@@ -1932,17 +1932,17 @@ typedef struct _VAImage
     unsigned short	width; 
     unsigned short	height;
     unsigned int	data_size;
-    unsigned int	num_planes;	/* can not be greater than 3 */
+    unsigned int	num_planes;	/* can not be greater than 4 */
     /* 
      * An array indicating the scanline pitch in bytes for each plane.
-     * Each plane may have a different pitch. Maximum 3 planes for planar formats
+     * Each plane may have a different pitch. Maximum 4 planes for planar formats
      */
-    unsigned int	pitches[3];
+    unsigned int	pitches[4];
     /* 
      * An array indicating the byte offset from the beginning of the image data 
      * to the start of each plane.
      */
-    unsigned int	offsets[3];
+    unsigned int	offsets[4];
 
     /* The following fields are only needed for paletted formats */
     int num_palette_entries;   /* set to zero for non-palette images */
