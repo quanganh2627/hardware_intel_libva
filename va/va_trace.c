@@ -49,6 +49,8 @@
  * .LIBVA_TRACE_CODEDBUF=coded_clip_file: save the coded clip into file coded_clip_file
  * .LIBVA_TRACE_SURFACE=yuv_file: save surface YUV into file yuv_file. Use file name to determine
  *                                decode/encode or jpeg surfaces
+ * .LIBVA_TRACE_SURFACE_GEOMETRY=WIDTHxHEIGHT+XOFF+YOFF: only save part of surface context into file
+ *                                due to storage bandwidth limitation
  * .LIBVA_TRACE_LOGSIZE=numeric number: truncate the log_file or coded_clip_file, or decoded_yuv_file
  *                                      when the size is bigger than the number
  */
@@ -88,6 +90,11 @@ static struct _trace_context {
     unsigned int trace_frame_no; /* current frame NO */
     unsigned int trace_slice_no; /* current slice NO */
     unsigned int trace_slice_size; /* current slice buffer size */
+
+    unsigned int trace_surface_width; /* surface dumping geometry */
+    unsigned int trace_surface_height;
+    unsigned int trace_surface_xoff;
+    unsigned int trace_surface_yoff;
 
     unsigned int trace_frame_width; /* current frame width */
     unsigned int trace_frame_height; /* current frame height */
@@ -202,7 +209,7 @@ void va_TraceInit(VADisplay dpy)
     if (va_parseConfig("LIBVA_TRACE_SURFACE", &env_value[0]) == 0) {
         FILE_NAME_SUFFIX(env_value);
         trace_context[trace_index].trace_surface_fn = strdup(env_value);
-        
+
         va_infoMessage("LIBVA_TRACE_SURFACE is on, save surface into %s\n",
                        trace_context[trace_index].trace_surface_fn);
 
@@ -218,6 +225,24 @@ void va_TraceInit(VADisplay dpy)
             trace_flag |= VA_TRACE_FLAG_SURFACE_ENCODE;
         if (strstr(env_value, "jpeg") || strstr(env_value, "jpg"))
             trace_flag |= VA_TRACE_FLAG_SURFACE_JPEG;
+
+        if (va_parseConfig("LIBVA_TRACE_SURFACE_GEOMETRY", &env_value[0]) == 0) {
+            char *p = env_value, *q;
+
+            trace_context[trace_index].trace_surface_width = strtod(p, &q);
+            p = q+1; /* skip "x" */
+            trace_context[trace_index].trace_surface_height = strtod(p, &q);
+            p = q+1; /* skip "+" */
+            trace_context[trace_index].trace_surface_xoff = strtod(p, &q);
+            p = q+1; /* skip "+" */
+            trace_context[trace_index].trace_surface_yoff = strtod(p, &q);
+
+            va_infoMessage("LIBVA_TRACE_SURFACE_GEOMETRY is on, only dump surface %dx%d+%d+%d content\n",
+                           trace_context[trace_index].trace_surface_width,
+                           trace_context[trace_index].trace_surface_height,
+                           trace_context[trace_index].trace_surface_xoff,
+                           trace_context[trace_index].trace_surface_yoff);
+        }
     }
 
     trace_context[trace_index].dpy = dpy;
@@ -310,7 +335,7 @@ void va_TraceCodedBuf(VADisplay dpy)
         unsigned int i;
         
         va_TraceMsg(idx, "\tsize = %d\n", buf_list->size);
-        if (trace_context[idx].trace_fp_log)
+        if (trace_context[idx].trace_fp_codedbuf)
             fwrite(buf_list->buf, buf_list->size, 1, trace_context[idx].trace_fp_codedbuf);
 
         for (i=0; i<buf_list->size; i++)
@@ -386,20 +411,24 @@ void va_TraceSurface(VADisplay dpy)
     Y_data = (unsigned char*)buffer;
     UV_data = (unsigned char*)buffer + chroma_u_offset;
 
-    tmp = Y_data;
-    for (i=0; i<trace_context[idx].trace_frame_height; i++) {
+    tmp = Y_data + luma_stride * trace_context[idx].trace_surface_yoff;
+    for (i=0; i<trace_context[idx].trace_surface_height; i++) {
         if (trace_context[idx].trace_fp_surface)
-            fwrite(tmp, trace_context[idx].trace_frame_width, 1, trace_context[idx].trace_fp_surface);
+            fwrite(tmp + trace_context[idx].trace_surface_xoff,
+                   trace_context[idx].trace_surface_width,
+                   1, trace_context[idx].trace_fp_surface);
         
-        tmp = Y_data + i * luma_stride;
+        tmp += luma_stride;
     }
-    tmp = UV_data;
+    tmp = UV_data + chroma_u_stride * trace_context[idx].trace_surface_yoff;
     if (fourcc == VA_FOURCC_NV12) {
-        for (i=0; i<trace_context[idx].trace_frame_height/2; i++) {
+        for (i=0; i<trace_context[idx].trace_surface_height/2; i++) {
             if (trace_context[idx].trace_fp_surface)
-                fwrite(tmp, trace_context[idx].trace_frame_width, 1, trace_context[idx].trace_fp_surface);
+                fwrite(tmp + trace_context[idx].trace_surface_xoff,
+                       trace_context[idx].trace_surface_width,
+                       1, trace_context[idx].trace_fp_surface);
             
-            tmp = UV_data + i * chroma_u_stride;
+            tmp += chroma_u_stride;
         }
     }
 
@@ -551,6 +580,11 @@ void va_TraceCreateContext(
 
     trace_context[idx].trace_frame_width = picture_width;
     trace_context[idx].trace_frame_height = picture_height;
+
+    if (trace_context[idx].trace_surface_width == 0)
+        trace_context[idx].trace_surface_width = picture_width;
+    if (trace_context[idx].trace_surface_height == 0)
+        trace_context[idx].trace_surface_height = picture_height;
 }
 
 
@@ -1157,7 +1191,7 @@ static void va_TraceVAEncSequenceParameterBufferH264(
 {
     VAEncSequenceParameterBufferH264 *p = (VAEncSequenceParameterBufferH264 *)data;
     DPY2INDEX(dpy);
-    int i;
+    unsigned int i;
 
     va_TraceMsg(idx, "VAEncSequenceParameterBufferH264\n");
 
@@ -2174,10 +2208,8 @@ void va_TraceEndPicture(
 
     TRACE_FUNCNAME(idx);
 
-    if (endpic_done == 0) {
-        va_TraceMsg(idx, "\tcontext = 0x%08x\n", context);
-        va_TraceMsg(idx, "\trender_targets = 0x%08x\n", trace_context[idx].trace_rendertarget);
-    }
+    va_TraceMsg(idx, "\tcontext = 0x%08x\n", context);
+    va_TraceMsg(idx, "\trender_targets = 0x%08x\n", trace_context[idx].trace_rendertarget);
 
     encode = (trace_context[idx].trace_entrypoint == VAEntrypointEncSlice) &&
         (trace_flag & VA_TRACE_FLAG_SURFACE_ENCODE);
@@ -2185,24 +2217,23 @@ void va_TraceEndPicture(
         (trace_flag & VA_TRACE_FLAG_SURFACE_DECODE);
     jpeg = (trace_context[idx].trace_entrypoint == VAEntrypointEncPicture) &&
         (trace_flag & VA_TRACE_FLAG_SURFACE_JPEG);
-    
-    /* want to trace encode source surface, do it before vaEndPicture */
-    if ((encode || jpeg) && (endpic_done == 0))
+
+    /* trace encode source surface, can do it before HW completes rendering */
+    if (encode || jpeg)
         va_TraceSurface(dpy);
     
-    /* want to trace encoode codedbuf, do it after vaEndPicture */
-    if ((encode || jpeg) && (endpic_done == 1)) {
-        /* force the pipleline finish rendering */
+    /* trace coded buffer, do it after HW completes rendering */
+    if ((encode || jpeg) && (trace_flag & VA_TRACE_FLAG_CODEDBUF)) {
         vaSyncSurface(dpy, trace_context[idx].trace_rendertarget);
         va_TraceCodedBuf(dpy);
     }
 
-    /* want to trace decode dest surface, do it after vaEndPicture */
-    if (decode && (endpic_done == 1)) {
-        /* force the pipleline finish rendering */
+    /* trace decoded surface, do it after HW completes rendering */
+    if (decode) {
         vaSyncSurface(dpy, trace_context[idx].trace_rendertarget);
         va_TraceSurface(dpy);
     }
+
     va_TraceMsg(idx, NULL);
 }
 
