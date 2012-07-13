@@ -20,7 +20,7 @@ VADisplay vaGetDisplay (
 
 #ifdef __cplusplus
 #ifdef ANDROID
-#include <surfaceflinger/ISurface.h>
+#include <gui/Surface.h>
 using namespace android;
 
 /*
