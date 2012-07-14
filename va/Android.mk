@@ -23,6 +23,8 @@
 # For libva
 # =====================================================
 
+ifeq ($(INTEL_VA),true)
+
 LOCAL_PATH:= $(call my-dir)
 
 LIBVA_DRIVERS_PATH = /system/lib
@@ -154,3 +156,4 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva-tpi
 
 include $(BUILD_SHARED_LIBRARY)
+endif
