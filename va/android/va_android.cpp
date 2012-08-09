@@ -111,7 +111,6 @@ static VAStatus va_DisplayContextGetDriverName (
 {
     VADriverContextP ctx = pDisplayContext->pDriverContext;
     struct dri_state *dri_state = (struct dri_state *)ctx->dri_state;
-    char *driver_name_env;
     int vendor_id, device_id;
     
     struct {

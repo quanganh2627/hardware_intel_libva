@@ -352,7 +352,7 @@ void va_TraceCodedBuf(VADisplay dpy)
 
 void va_TraceSurface(VADisplay dpy)
 {
-    unsigned int i, j;
+    unsigned int i;
     unsigned int fourcc; /* following are output argument */
     unsigned int luma_stride;
     unsigned int chroma_u_stride;
@@ -364,7 +364,6 @@ void va_TraceSurface(VADisplay dpy)
     void *buffer = NULL;
     unsigned char *Y_data, *UV_data, *tmp;
     VAStatus va_status;
-    unsigned char check_sum = 0;
     DPY2INDEX(dpy);
 
     va_TraceMsg(idx, "==========dump surface data in file %s\n", trace_context[idx].trace_surface_fn);
