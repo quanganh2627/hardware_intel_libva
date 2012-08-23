@@ -343,13 +343,11 @@ typedef enum _VAProcColorStandardType {
 /** @name Pipeline end flags */
 /**@{*/
 /** \brief Specifies the pipeline is the last. */
-#define VA_PIPELINE_FLAG_END 0x8
+#define VA_PIPELINE_FLAG_END 0x00000004
 /**@}*/
 
 /** \brief Video processing pipeline capabilities. */
 typedef struct _VAProcPipelineCaps {
-    /** \brief Video filter flags. See video pipeline flags. */
-    unsigned int        flags;
     /** \brief Pipeline flags. See VAProcPipelineParameterBuffer::pipeline_flags. */
     unsigned int        pipeline_flags;
     /** \brief Extra filter flags. See VAProcPipelineParameterBuffer::filter_flags. */

@@ -274,6 +274,7 @@ VAPrivFunc vaGetLibFunc (
 /* Currently defined profiles */
 typedef enum
 {
+    VAProfileNone			= -1,
     VAProfileMPEG2Simple		= 0,
     VAProfileMPEG2Main			= 1,
     VAProfileMPEG4Simple		= 2,
@@ -291,7 +292,6 @@ typedef enum
     VAProfileH264MultiviewHigh		= 14,
     VAProfileH264StereoHigh		= 15,
     /** \brief Profile ID used for video processing. */
-    VAProfileNone			= 16,
     VAProfileVP8Version0_3		= 17,
     VAProfileMax
 } VAProfile;
