@@ -44,6 +44,7 @@ typedef enum {
     VAExternalMemoryAndroidGrallocBuffer, /* the memory is from Android Gralloc memory, and buffers points
                                            * the gralloc native_handle_t list
                                            */
+    VAExternalMemoryIONSharedFD, /* the memory is allocated from ION and shared as a fd */
 } VASurfaceMemoryType;
 
 typedef struct _VASurfaceAttributeTPI {
