@@ -45,6 +45,7 @@ typedef enum {
                                            * the gralloc native_handle_t list
                                            */
     VAExternalMemoryIONSharedFD, /* the memory is allocated from ION and shared as a fd */
+    VAExternalMemoryNoneCacheUserPointer, /* the memory is uncached and allocated from user space*/
 } VASurfaceMemoryType;
 
 typedef struct _VASurfaceAttributeTPI {
