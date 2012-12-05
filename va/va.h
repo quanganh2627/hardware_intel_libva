@@ -391,6 +391,18 @@ typedef enum
      * through VAEncSliceParameterBufferH264::macroblock_info.
      */
     VAConfigAttribEncMacroblockInfo     = 16,
+    /**
+     * \brief Auto reconstructed/reference frame management. Read/Write.
+     *
+     * This attribute determines whether the driver supports auto reconstructed
+     * and reference management.
+     *
+     * If driver supports, and application sets it to true, application doesn't need
+     * to set the reconstructed/reference frames information in #VAEncMacroblockParameterBufferH264
+     * and #VAEncSliceParameterBufferH264. Driver will manage the reference frames internally
+     * and choose the best reference frames.
+     */
+    VAConfigAttribEncAutoReference     = 17,
     /**@}*/
 
     VAConfigAttribTypeMax
