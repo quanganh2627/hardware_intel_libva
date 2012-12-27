@@ -20,14 +20,18 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-INCLUDES = -I$(top_srcdir)
+INCLUDES = \
+	-I$(top_srcdir) \
+	-DVA_DRIVERS_PATH="\"$(LIBVA_DRIVERS_PATH)\""
 
-if BUILD_DUMMY_DRIVER
+#if BUILD_DUMMY_DRIVER
 dummy_drv_video_la_LTLIBRARIES	= dummy_drv_video.la
-dummy_drv_video_ladir		= $(LIBVA_DRIVERS_PATH)
+dummy_drv_video_ladir		= @LIBVA_DRIVERS_PATH@
 dummy_drv_video_la_LDFLAGS	= -module -avoid-version -no-undefined -Wl,--no-undefined
 dummy_drv_video_la_LIBADD	= $(top_builddir)/va/$(libvabackendlib)
 dummy_drv_video_la_DEPENDENCIES	= $(top_builddir)/va/$(libvabackendlib)
-dummy_drv_video_la_SOURCES	= dummy_drv_video.c object_heap.c
-noinst_HEADERS			= dummy_drv_video.h object_heap.h
-endif
+
+AM_CFLAGS = -I$(top_srcdir)/va -I$(top_srcdir)/../../include/external/ -I$(top_srcdir)/../../include/kmd
+dummy_drv_video_la_SOURCES	= dummy_drv_video.c object_heap.c va_dummy.c
+noinst_HEADERS			= dummy_drv_video.h object_heap.h va_dummy.h
+#endif

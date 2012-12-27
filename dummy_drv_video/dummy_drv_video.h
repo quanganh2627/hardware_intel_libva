@@ -8,7 +8,7 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
@@ -26,6 +26,7 @@
 #define _DUMMY_DRV_VIDEO_H_
 
 #include <va/va.h>
+#include "va/va_backend.h"
 #include "object_heap.h"
 
 #define DUMMY_MAX_PROFILES			11
@@ -41,6 +42,7 @@ struct dummy_driver_data {
     struct object_heap	context_heap;
     struct object_heap	surface_heap;
     struct object_heap	buffer_heap;
+    struct object_heap	image_heap;
 };
 
 struct object_config {
@@ -66,6 +68,8 @@ struct object_context {
 struct object_surface {
     struct object_base base;
     VASurfaceID surface_id;
+    int width;
+    int height;
 };
 
 struct object_buffer {
@@ -75,9 +79,25 @@ struct object_buffer {
     int num_elements;
 };
 
+struct object_image {
+    struct object_base base;
+    VAImage image;
+    unsigned int palette[16];
+    int subpic_ref;
+    VASurfaceID derived_surface;
+};
+
 typedef struct object_config *object_config_p;
 typedef struct object_context *object_context_p;
 typedef struct object_surface *object_surface_p;
+typedef struct object_image *object_image_p;
 typedef struct object_buffer *object_buffer_p;
+
+VAStatus VA_DRIVER_INIT_FUNC(  VADriverContextP ctx );
+
+#define MEMSET_OBJECT(ptr, data_struct) \
+        memset((unsigned char *)ptr + sizeof(struct object_base),\
+                0,                          \
+               sizeof(data_struct) - sizeof(struct object_base))
 
 #endif /* _DUMMY_DRV_VIDEO_H_ */
