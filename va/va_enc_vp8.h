@@ -50,8 +50,6 @@ extern "C" {
  */
 typedef struct  _VAEncSequenceParameterBufferVP8
 {
-    /* profile */
-    unsigned int profile;
     /* frame width in pixels */
     unsigned int frame_width;
     /* frame height in pixels */
@@ -60,17 +58,12 @@ typedef struct  _VAEncSequenceParameterBufferVP8
     unsigned int frame_rate;
     /* whether to enable error resilience features */
     unsigned int error_resilient;
-    /* number of token partitions */
-    unsigned int num_token_partitions;
     /* auto keyframe placement, non-zero means enable auto keyframe placement */
     unsigned int kf_auto;
     /* keyframe minimum interval */
     unsigned int kf_min_dist;
     /* keyframe maximum interval */
     unsigned int kf_max_dist;
-
-    /* quality setting, equivalent to VP8E_SET_CPUUSED */
-    unsigned int quality_setting;
 
     /* RC related fields. RC modes are set with VAConfigAttribRateControl */
     /* For VP8, CBR implies HRD conformance and VBR implies no HRD conformance */
@@ -92,6 +85,9 @@ typedef struct  _VAEncSequenceParameterBufferVP8
     /* HRD buffer optimal fullness */
     unsigned int hrd_buf_optimal_fullness;
 
+    /* reference and reconstructed frame buffers*/
+    VASurfaceID reference_frames[4];
+
 } VAEncSequenceParameterBufferVP8;
 
 /**
@@ -102,16 +98,12 @@ typedef struct  _VAEncSequenceParameterBufferVP8
  */
 typedef struct  _VAEncPictureParameterBufferVP8
 {
-    /* specifies the "last" reference frame */
-    VASurfaceID last_ref_frame;
-    /* specifies the "golden" reference frame */
-    VASurfaceID golden_ref_frame;
-    /* specifies the "alternate" referrence frame */
-    VASurfaceID alt_ref_frame;
     /* surface to store reconstructed frame  */
     VASurfaceID reconstructed_frame;
     /* buffer to store coded data */
     VABufferID coded_buf;
+    /* equivalent to VP8E_SET_CPUUSED */
+    unsigned int cpu_used;
 
     union {
         struct {
@@ -123,6 +115,15 @@ typedef struct  _VAEncPictureParameterBufferVP8
             unsigned int no_ref_gf		: 1;
 	    /* don't reference the alternate reference frame */
             unsigned int no_ref_arf		: 1;
+	    /*  0: bicubic, 1: bilinear, other: none */
+            unsigned int recon_filter_type       :2;
+	    /*  only invalid if recon_filter_type set to bilinear.
+             *   0: no loop fitler, 1: simple loop filter */
+            unsigned int loop_filter_type           :1;
+	    /* 1: enable, 0: disabled */
+            unsigned int auto_partitions            :1;
+	    /* number of token partitions */
+            unsigned int num_token_partitions :2;
         } bits;
         unsigned int value;
     } pic_flags;

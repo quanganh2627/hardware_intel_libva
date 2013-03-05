@@ -236,27 +236,25 @@ extern "C" {
 
 /** \brief Video filter types. */
 typedef enum _VAProcFilterType {
-    VAProcFilterNone                = 0,
-    /** \brief Dering filter. */
-    VAProcFilterDering              = 1,
-    /** \brief De-blocking filter. */
-    VAProcFilterDeblocking          = 2,
+    VAProcFilterNone = 0,
     /** \brief Noise reduction filter. */
-    VAProcFilterNoiseReduction      = 3,
+    VAProcFilterNoiseReduction,
+    /** \brief Deblocking filter. */
+    VAProcFilterDeblocking,
     /** \brief Deinterlacing filter. */
-    VAProcFilterDeinterlacing       = 4,
+    VAProcFilterDeinterlacing,
     /** \brief Sharpening filter. */
-    VAProcFilterSharpening          = 5,
+    VAProcFilterSharpening,
     /** \brief Color balance parameters. */
-    VAProcFilterColorBalance        = 6,
+    VAProcFilterColorBalance,
     /** \brief Color standard conversion. */
-    VAProcFilterColorStandard       = 7,
+    VAProcFilterColorStandard,
+    /** \brief Frame rate conversion. */
+    VAProcFilterFrameRateConversion,
+    VAProcFilterColorEnhancement,
+    VAProcFilterProcAmp,
+    VAProcFilterComposition,
     /** \brief Number of video filters. */
-    VAProcFilterColorEnhancement    = 8,
-    VAProcFilterProcAmp             = 9,
-    VAProcFilterComposition         = 10,
-    /** \brief Frame rate convert filter. */
-    VAProcFilterFrameRateConversion = 11,
     VAProcFilterCount
 } VAProcFilterType;
 
@@ -317,6 +315,45 @@ typedef enum _VAProcColorStandardType {
     VAProcColorStandardCount
 } VAProcColorStandardType;
 
+/** @name Video blending flags */
+/**@{*/
+/** \brief Global alpha blending. */
+#define VA_BLEND_GLOBAL_ALPHA           0x0002
+/** \brief Premultiplied alpha blending (RGBA surfaces only). */
+#define VA_BLEND_PREMULTIPLIED_ALPHA    0x0008
+/** \brief Luma color key (YUV surfaces only). */
+#define VA_BLEND_LUMA_KEY               0x0010
+/**@}*/
+
+/** \brief Video blending state definition. */
+typedef struct _VABlendState {
+    /** \brief Video blending flags. */
+    unsigned int        flags;
+    /**
+     * \brief Global alpha value.
+     *
+     * Valid if \flags has VA_BLEND_GLOBAL_ALPHA.
+     * Valid range is 0.0 to 1.0 inclusive.
+     */
+    float               global_alpha;
+    /**
+     * \brief Minimum luma value.
+     *
+     * Valid if \flags has VA_BLEND_LUMA_KEY.
+     * Valid range is 0.0 to 1.0 inclusive.
+     * \ref min_luma shall be set to a sensible value lower than \ref max_luma.
+     */
+    float               min_luma;
+    /**
+     * \brief Maximum luma value.
+     *
+     * Valid if \flags has VA_BLEND_LUMA_KEY.
+     * Valid range is 0.0 to 1.0 inclusive.
+     * \ref max_luma shall be set to a sensible value larger than \ref min_luma.
+     */
+    float               max_luma;
+} VABlendState;
+
 /** @name Video pipeline flags */
 /**@{*/
 /** \brief Specifies whether to apply subpictures when processing a surface. */
@@ -343,7 +380,7 @@ typedef enum _VAProcColorStandardType {
 /** @name Pipeline end flags */
 /**@{*/
 /** \brief Specifies the pipeline is the last. */
-#define VA_PIPELINE_FLAG_END 0x00000004
+#define VA_PIPELINE_FLAG_END		0x00000004
 /**@}*/
 
 /** \brief Video processing pipeline capabilities. */
@@ -352,6 +389,18 @@ typedef struct _VAProcPipelineCaps {
     unsigned int        pipeline_flags;
     /** \brief Extra filter flags. See VAProcPipelineParameterBuffer::filter_flags. */
     unsigned int        filter_flags;
+    /** \brief Number of forward reference frames that are needed. */
+    unsigned int        num_forward_references;
+    /** \brief Number of backward reference frames that are needed. */
+    unsigned int        num_backward_references;
+    /** \brief List of color standards supported on input. */
+    VAProcColorStandardType *input_color_standards;
+    /** \brief Number of elements in \ref input_color_standards array. */
+    unsigned int        num_input_color_standards;
+    /** \brief List of color standards supported on output. */
+    VAProcColorStandardType *output_color_standards;
+    /** \brief Number of elements in \ref output_color_standards array. */
+    unsigned int        num_output_color_standards;
     /**
      * \brief Rotation flags.
      *
@@ -378,18 +427,8 @@ typedef struct _VAProcPipelineCaps {
      * \endcode
      */
     unsigned int        rotation_flags;
-    /** \brief Number of forward reference frames that are needed. */
-    unsigned int        num_forward_references;
-    /** \brief Number of backward reference frames that are needed. */
-    unsigned int        num_backward_references;
-    /** \brief List of color standards supported on input. */
-    VAProcColorStandardType *input_color_standards;
-    /** \brief Number of elements in \ref input_color_standards array. */
-    unsigned int        num_input_color_standards;
-    /** \brief List of color standards supported on output. */
-    VAProcColorStandardType *output_color_standards;
-    /** \brief Number of elements in \ref output_color_standards array. */
-    unsigned int        num_output_color_standards;
+    /** \brief Blend flags. See "Video blending flags". */
+    unsigned int        blend_flags;
 } VAProcPipelineCaps;
 
 /** \brief Specification of values supported by the filter. */
@@ -492,31 +531,6 @@ typedef struct _VAProcPipelineParameterBuffer {
      */
     VAProcColorStandardType output_color_standard;
     /**
-     * \brief Rotation state. See rotation angles.
-     *
-     * The rotation angle is clockwise. There is no specific rotation
-     * center for this operation. Rather, The source \ref surface is
-     * first rotated by the specified angle and then scaled to fit the
-     * \ref output_region.
-     *
-     * This means that the top-left hand corner (0,0) of the output
-     * (rotated) surface is expressed as follows:
-     * - \ref VA_ROTATION_NONE: (0,0) is the top left corner of the
-     *   source surface -- no rotation is performed ;
-     * - \ref VA_ROTATION_90: (0,0) is the bottom-left corner of the
-     *   source surface ;
-     * - \ref VA_ROTATION_180: (0,0) is the bottom-right corner of the
-     *   source surface -- the surface is flipped around the X axis ;
-     * - \ref VA_ROTATION_270: (0,0) is the top-right corner of the
-     *   source surface.
-     *
-     * Check VAProcPipelineCaps::rotation_flags first prior to
-     * defining a specific rotation angle. Otherwise, the hardware can
-     * perfectly ignore this variable if it does not support any
-     * rotation.
-     */
-    unsigned int        rotation_state;
-    /**
      * \brief Pipeline filters. See video pipeline flags.
      *
      * Flags to control the pipeline, like whether to apply subpictures
@@ -569,6 +583,50 @@ typedef struct _VAProcPipelineParameterBuffer {
     VASurfaceID        *backward_references;
     /** \brief Number of backward reference frames that were supplied. */
     unsigned int        num_backward_references;
+    /**
+     * \brief Rotation state. See rotation angles.
+     *
+     * The rotation angle is clockwise. There is no specific rotation
+     * center for this operation. Rather, The source \ref surface is
+     * first rotated by the specified angle and then scaled to fit the
+     * \ref output_region.
+     *
+     * This means that the top-left hand corner (0,0) of the output
+     * (rotated) surface is expressed as follows:
+     * - \ref VA_ROTATION_NONE: (0,0) is the top left corner of the
+     *   source surface -- no rotation is performed ;
+     * - \ref VA_ROTATION_90: (0,0) is the bottom-left corner of the
+     *   source surface ;
+     * - \ref VA_ROTATION_180: (0,0) is the bottom-right corner of the
+     *   source surface -- the surface is flipped around the X axis ;
+     * - \ref VA_ROTATION_270: (0,0) is the top-right corner of the
+     *   source surface.
+     *
+     * Check VAProcPipelineCaps::rotation_flags first prior to
+     * defining a specific rotation angle. Otherwise, the hardware can
+     * perfectly ignore this variable if it does not support any
+     * rotation.
+     */
+    unsigned int        rotation_state;
+    /**
+     * \brief blending state. See "Video blending state definition".
+     *
+     * If \ref blend_state is NULL, then default operation mode depends
+     * on the source \ref surface format:
+     * - RGB: per-pixel alpha blending ;
+     * - YUV: no blending, i.e override the underlying pixels.
+     *
+     * Otherwise, \ref blend_state is a pointer to a #VABlendState
+     * structure that shall be live until vaEndPicture().
+     *
+     * Implementation note: the driver is responsible for checking the
+     * blend state flags against the actual source \ref surface format.
+     * e.g. premultiplied alpha blending is only applicable to RGB
+     * surfaces, and luma keying is only applicable to YUV surfaces.
+     * If a mismatch occurs, then #VA_STATUS_ERROR_INVALID_BLEND_STATE
+     * is returned.
+     */
+    const VABlendState *blend_state;
 } VAProcPipelineParameterBuffer;
 
 /**
@@ -596,12 +654,28 @@ typedef struct _VAProcFilterParameterBuffer {
     float               value;
 } VAProcFilterParameterBuffer;
 
+/** @name De-interlacing flags */
+/**@{*/
+/** 
+ * \brief Bottom field first in the input frame. 
+ * if this is not set then assums top field first.
+ */
+#define VA_DEINTERLACING_INPUT_BOTTOM_FIELD_FIRST	0x0001
+/** 
+ * \brief Bottom field used in BOB deinterlacing. 
+ * if this is not set then assums top field is used.
+ */
+#define VA_DEINTERLACING_BOB_BOTTOM_FIELD		0x0002
+/**@}*/
+
 /** \brief Deinterlacing filter parametrization. */
 typedef struct _VAProcFilterParameterBufferDeinterlacing {
     /** \brief Filter type. Shall be set to #VAProcFilterDeinterlacing. */
     VAProcFilterType            type;
     /** \brief Deinterlacing algorithm. */
     VAProcDeinterlacingType     algorithm;
+    /** \brief Deinterlacing flags. */
+    unsigned int     		flags;
 } VAProcFilterParameterBufferDeinterlacing;
 
 /**

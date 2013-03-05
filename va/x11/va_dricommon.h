@@ -1,3 +1,26 @@
+/*
+ * Copyright (c) 2012 Intel Corporation. All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sub license, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the
+ * next paragraph) shall be included in all copies or substantial portions
+ * of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+ * IN NO EVENT SHALL PRECISION INSIGHT AND/OR ITS SUPPLIERS BE LIABLE FOR
+ * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 #ifndef _VA_DRICOMMON_H_
 #define _VA_DRICOMMON_H_
 
@@ -9,18 +32,19 @@
 #endif
 
 #include <va/va_backend.h>
+#include <va/va_drmcommon.h>
 
 #ifdef ANDROID
 #define XID unsigned int
 #define Bool int
 #endif
 
-enum
-{
-    VA_NONE = 0,
-    VA_DRI1 = 1,
-    VA_DRI2 = 2,
-    VA_DUMMY = 3
+enum {
+    /* Compatibility. Do not use for newly-written code. */
+    VA_NONE     = VA_DRM_AUTH_NONE,
+    VA_DRI1     = VA_DRM_AUTH_DRI1,
+    VA_DRI2     = VA_DRM_AUTH_DRI2,
+    VA_DUMMY    = VA_DRM_AUTH_CUSTOM
 };
 
 union dri_buffer 
@@ -51,8 +75,7 @@ struct dri_drawable
 #define DRAWABLE_HASH_SZ 32
 struct dri_state 
 {
-    int fd;
-    int driConnectedFlag; /* 0: disconnected, 1: DRI, 2: DRI2 */
+    struct drm_state base;
 #ifndef ANDROID
     drm_handle_t hSAREA;
     drm_context_t hwContext;

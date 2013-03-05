@@ -24,7 +24,7 @@
 /*
  * Video Acceleration (VA) API Specification
  *
- * Rev. 0.32.2
+ * Rev. 0.30
  * <jonathan.bian@intel.com>
  *
  * Revision History:
@@ -61,9 +61,6 @@
  *                                        screen relative rather than source video relative.
  * rev 0.32.0 (01/13/2011 Xiang Haihao) - Add profile into VAPictureParameterBufferVC1
  *                                        update VAAPI to 0.32.0
- * rev 0.32.1 (05/04/2011)              - Linux VA encoding API extension proposal
- *
- * rev 0.32.2 (07/05/2011 Jonathan Bian/Andrey Yakovenko) - Video Processing interface 
  *
  * Acknowledgements:
  *  Some concepts borrowed from XvMC and XvImage.
@@ -181,8 +178,10 @@ typedef int VAStatus;	/* Return status type from functions */
 /** \brief An invalid filter chain was supplied. */
 #define VA_STATUS_ERROR_INVALID_FILTER_CHAIN    0x00000021
 /** \brief Indicate HW busy (e.g. run multiple encoding simultaneously). */
-#define VA_STATUS_ERROR_HW_BUSY                 0x00000022
-#define VA_STATUS_ERROR_UNKNOWN                 0xFFFFFFFF
+#define VA_STATUS_ERROR_HW_BUSY	                0x00000022
+/** \brief An invalid blend state was supplied. */
+#define VA_STATUS_ERROR_INVALID_BLEND_STATE     0x00000023
+#define VA_STATUS_ERROR_UNKNOWN			0xFFFFFFFF
 
 /* De-interlacing flags for vaPutSurface() */
 #define VA_FRAME_PICTURE        0x00000000 
@@ -228,7 +227,7 @@ const char *vaErrorStr(VAStatus error_status);
  * native window system.
  * For X Windows, native_dpy would be from XOpenDisplay()
  */
-typedef void* NativeDisplay;	/* window system dependent */
+typedef void* VANativeDisplay;	/* window system dependent */
 
 int vaDisplayIsValid(VADisplay dpy);
     
@@ -274,7 +273,8 @@ VAPrivFunc vaGetLibFunc (
 /* Currently defined profiles */
 typedef enum
 {
-    VAProfileNone			= -1,
+    /** \brief Profile ID used for video processing. */
+    VAProfileNone                       = -1,
     VAProfileMPEG2Simple		= 0,
     VAProfileMPEG2Main			= 1,
     VAProfileMPEG4Simple		= 2,
@@ -287,12 +287,11 @@ typedef enum
     VAProfileVC1Main			= 9,
     VAProfileVC1Advanced		= 10,
     VAProfileH263Baseline		= 11,
-    VAProfileJPEGBaseline		= 12,
-    VAProfileH264ConstrainedBaseline 	= 13,
-    VAProfileH264MultiviewHigh		= 14,
-    VAProfileH264StereoHigh		= 15,
-    /** \brief Profile ID used for video processing. */
-    VAProfileVP8Version0_3		= 17,
+    VAProfileJPEGBaseline               = 12,
+    VAProfileH264ConstrainedBaseline    = 13,
+    VAProfileH264MultiviewHigh          = 14,
+    VAProfileH264StereoHigh             = 15,
+    VAProfileVP8Version0_3              = 16,
     VAProfileMax
 } VAProfile;
 
@@ -404,7 +403,6 @@ typedef enum
      */
     VAConfigAttribEncAutoReference     = 17,
     /**@}*/
-
     VAConfigAttribTypeMax
 } VAConfigAttribType;
 
@@ -423,6 +421,10 @@ typedef struct _VAConfigAttrib {
 #define VA_RT_FORMAT_YUV420	0x00000001	
 #define VA_RT_FORMAT_YUV422	0x00000002
 #define VA_RT_FORMAT_YUV444	0x00000004
+#define VA_RT_FORMAT_YUV411	0x00000008
+#define VA_RT_FORMAT_YUV400	0x00000010
+#define VA_RT_FORMAT_RGB16	0x00010000
+#define VA_RT_FORMAT_RGB32	0x00020000
 #define VA_RT_FORMAT_PROTECTED	0x80000000
 
 /** @name Attribute values for VAConfigAttribRateControl */
@@ -661,7 +663,7 @@ typedef enum {
      * zero and drops the \c VA_SURFACE_ATTRIB_SETTABLE flag.
      */
     VASurfaceAttribPixelFormat,
-    /** \brief Minimal width in pixels (int, read/write). */
+    /** \brief Minimal width in pixels (int, read-only). */
     VASurfaceAttribMinWidth,
     /** \brief Maximal width in pixels (int, read-only). */
     VASurfaceAttribMaxWidth,
@@ -669,6 +671,10 @@ typedef enum {
     VASurfaceAttribMinHeight,
     /** \brief Maximal height in pixels (int, read-only). */
     VASurfaceAttribMaxHeight,
+    /** \brief Surface memory type expressed in bit fields (int, read/write). */
+    VASurfaceAttribMemoryType,
+    /** \brief External buffer descriptor (pointer, write). */
+    VASurfaceAttribExternalBufferDescriptor,
     /** \brief Number of surface attributes. */
     VASurfaceAttribCount
 } VASurfaceAttribType;
@@ -682,6 +688,65 @@ typedef struct _VASurfaceAttrib {
     /** \brief Value. See "Surface attribute types" for the expected types. */
     VAGenericValue      value;
 } VASurfaceAttrib;
+
+/** 
+ * @name VASurfaceAttribMemoryType values in bit fields. 
+ * Bit 0:7 are reserved for generic types, Bit 31:28 are reserved for 
+ * Linux DRM, Bit 23:20 are reserved for Android. DRM and Android specific
+ * types are defined in DRM and Android header files.
+ */
+/**@{*/
+/** \brief VA memory type (default) is supported. */
+#define VA_SURFACE_ATTRIB_MEM_TYPE_VA			0x00000001
+/** \brief V4L2 buffer memory type is supported. */
+#define VA_SURFACE_ATTRIB_MEM_TYPE_V4L2			0x00000002
+/** \brief User pointer memory type is supported. */
+#define VA_SURFACE_ATTRIB_MEM_TYPE_USER_PTR		0x00000004
+/**@}*/
+
+/** 
+ * \brief VASurfaceAttribExternalBuffers structure for 
+ * the VASurfaceAttribExternalBufferDescriptor attribute.
+ */
+typedef struct _VASurfaceAttribExternalBuffers {
+    /** \brief pixel format in fourcc. */
+    unsigned int pixel_format;
+    /** \brief width in pixels. */
+    unsigned int width;
+    /** \brief height in pixels. */
+    unsigned int height;
+    /** \brief total size of the buffer in bytes. */
+    unsigned int data_size;
+    /** \brief number of planes for planar layout */
+    unsigned int num_planes;
+    /** \brief pitch for each plane in bytes */
+    unsigned int pitches[4];
+    /** \brief offset for each plane in bytes */
+    unsigned int offsets[4];
+    /** \brief buffer handles or user pointers */
+    unsigned long *buffers;
+    /** \brief number of elements in the "buffers" array */
+    unsigned int num_buffers;
+    /** \brief flags. See "Surface external buffer descriptor flags". */
+    unsigned int flags;
+    /** \brief reserved for passing private data */
+    void *private_data;
+} VASurfaceAttribExternalBuffers;
+
+/** @name VASurfaceAttribExternalBuffers flags */
+/**@{*/
+/** \brief Enable memory tiling */
+#define VA_SURFACE_EXTBUF_DESC_ENABLE_TILING	0x00000001
+/** \brief Memory is cacheable */
+#define VA_SURFACE_EXTBUF_DESC_CACHED		0x00000002
+/** \brief Memory is non-cacheable */
+#define VA_SURFACE_EXTBUF_DESC_UNCACHED		0x00000004
+/** \brief Memory is write-combined */
+#define VA_SURFACE_EXTBUF_DESC_WC		0x00000008
+/** \brief Memory is protected */
+#define VA_SURFACE_EXTBUF_DESC_PROTECTED        0x80000000
+
+/**@}*/
 
 /**
  * \brief Get surface attributes for the supplied config.
@@ -865,6 +930,14 @@ typedef enum {
     VAEncPackedHeaderPicture    = 2,
     /** \brief Packed slice header. */
     VAEncPackedHeaderSlice      = 3,
+    /** 
+     * \brief Packed raw header. 
+     * 
+     * Packed raw data header can be used by the client to insert a header  
+     * into the bitstream data buffer at the point it is passed, without 
+     * any handling or interpretation by the implementation.  
+     */
+    VAEncPackedHeaderRawData    = 4,
     /** \brief Misc packed header. See codec-specific definitions. */
     VAEncPackedHeaderMiscMask   = 0x80000000,
 } VAEncPackedHeaderType;
@@ -1018,6 +1091,7 @@ typedef struct _VAEncPictureParameterBufferJPEG
     VABufferID coded_buf;
 } VAEncPictureParameterBufferJPEG;
 
+#include <va/va_dec_jpeg.h>
 
 /****************************
  * MPEG-2 data structures
@@ -1383,6 +1457,8 @@ typedef struct _VAPictureParameterBufferVC1
         } bits;
         unsigned int value;
     } transform_fields;
+    unsigned char luma_scale2;		/* PICTURE_LAYER::LUMSCALE2 */
+    unsigned char luma_shift2;		/* PICTURE_LAYER::LUMSHIFT2 */
 } VAPictureParameterBufferVC1;
 
 /* VC-1 Bitplane Buffer 
@@ -1580,6 +1656,7 @@ typedef struct _VAEncSliceParameterBuffer
         unsigned int value;
     } slice_flags;
 } VAEncSliceParameterBuffer;
+
 
 /****************************
  * H.263 specific encode data structures
@@ -1895,11 +1972,17 @@ VAStatus vaQuerySurfaceError(
     ((unsigned long)(unsigned char) (ch0) | ((unsigned long)(unsigned char) (ch1) << 8) | \
     ((unsigned long)(unsigned char) (ch2) << 16) | ((unsigned long)(unsigned char) (ch3) << 24 ))
 
-/* a few common FourCCs */
+/* 
+ * Pre-defined fourcc codes
+ */
 #define VA_FOURCC_NV12		0x3231564E
 #define VA_FOURCC_AI44		0x34344149
 #define VA_FOURCC_RGBA		0x41424752
+#define VA_FOURCC_RGBX		0x58424752
 #define VA_FOURCC_BGRA		0x41524742
+#define VA_FOURCC_BGRX		0x58524742
+#define VA_FOURCC_ARGB		0x42475241
+#define VA_FOURCC_XRGB		0x42475258
 #define VA_FOURCC_UYVY          0x59565955
 #define VA_FOURCC_YUY2          0x32595559
 #define VA_FOURCC_AYUV          0x56555941
@@ -1909,6 +1992,14 @@ VAStatus vaQuerySurfaceError(
 #define VA_FOURCC_IYUV          0x56555949
 #define VA_FOURCC_YV24          0x34325659
 #define VA_FOURCC_YV32          0x32335659
+#define VA_FOURCC_Y800          0x30303859
+#define VA_FOURCC_IMC3          0x33434D49
+#define VA_FOURCC_411P          0x50313134
+#define VA_FOURCC_422H          0x48323234
+#define VA_FOURCC_422V          0x56323234
+#define VA_FOURCC_444P          0x50343434
+#define VA_FOURCC_RGBP          0x50424752
+#define VA_FOURCC_BGRP          0x50524742
 
 /* byte order */
 #define VA_LSB_FIRST		1

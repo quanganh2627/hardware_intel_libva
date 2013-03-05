@@ -43,7 +43,7 @@ extern "C" {
  */
 
 /**
- * \brief VPX Bool Coder Context structure
+ * \brief VPX Bool Coder Context structure 
  *
  * This common structure is defined for potential sharing by other VP formats
  *
@@ -84,7 +84,7 @@ typedef struct  _VAPictureParameterBufferVP8
     union {
         struct {
 	    /* same as key_frame in bitstream syntax */
-            unsigned int key_frame			: 1;
+            unsigned int key_frame			: 1; 
 	    /* same as version in bitstream syntax */
             unsigned int version			: 3;
 	    /* same as segmentation_enabled in bitstream syntax */
@@ -94,29 +94,29 @@ typedef struct  _VAPictureParameterBufferVP8
 	    /* same as update_segment_feature_data in bitstream syntax */
             unsigned int update_segment_feature_data	: 1;
 	    /* same as filter_type in bitstream syntax */
-            unsigned int filter_type			: 1;
+            unsigned int filter_type			: 1; 
 	    /* same as sharpness_level in bitstream syntax */
-            unsigned int sharpness_level		: 3;
+            unsigned int sharpness_level		: 3; 
 	    /* same as loop_filter_adj_enable in bitstream syntax */
-            unsigned int loop_filter_adj_enable		: 1;
+            unsigned int loop_filter_adj_enable		: 1; 
 	    /* same as mode_ref_lf_delta_update in bitstream syntax */
-            unsigned int mode_ref_lf_delta_update	: 1;
+            unsigned int mode_ref_lf_delta_update	: 1; 
 	    /* same as sign_bias_golden in bitstream syntax */
-            unsigned int sign_bias_golden		: 1;
+            unsigned int sign_bias_golden		: 1; 
 	    /* same as sign_bias_alternate in bitstream syntax */
-            unsigned int sign_bias_alternate		: 1;
+            unsigned int sign_bias_alternate		: 1; 
 	    /* same as mb_no_coeff_skip in bitstream syntax */
-            unsigned int mb_no_coeff_skip		: 1;
+            unsigned int mb_no_coeff_skip		: 1; 
 	    /* see section 11.1 for mb_skip_coeff */
-            unsigned int mb_skip_coeff			: 1;
+            unsigned int mb_skip_coeff			: 1; 
 	    /* flag to indicate that loop filter should be disabled */
-            unsigned int loop_filter_disable		: 1;
+            unsigned int loop_filter_disable		: 1; 
         } bits;
         unsigned int value;
     } pic_fields;
 
     /*
-     * probabilities of the segment_id decoding tree and same as
+     * probabilities of the segment_id decoding tree and same as 
      * mb_segment_tree_probs in the spec.
      */
     unsigned char mb_segment_tree_probs[3];
@@ -137,18 +137,18 @@ typedef struct  _VAPictureParameterBufferVP8
     /* same as prob_gf in bitstream syntax */
     unsigned char prob_gf;
 
-    /*
+    /* 
      * list of 4 probabilities of the luma intra prediction mode decoding
      * tree and same as y_mode_probs in frame header
      */
-    unsigned char y_mode_probs[4];
+    unsigned char y_mode_probs[4]; 
     /*
      * list of 3 probabilities of the chroma intra prediction mode decoding
      * tree and same as uv_mode_probs in frame header
      */
     unsigned char uv_mode_probs[3];
-    /*
-     * updated mv decoding probabilities and same as mv_probs in
+    /* 
+     * updated mv decoding probabilities and same as mv_probs in 
      * frame header
      */
     unsigned char mv_probs[2][19];
@@ -169,14 +169,14 @@ typedef struct  _VAPictureParameterBufferVP8
 /**
  * \brief VP8 Coefficient Probability Data Buffer Structure
  *
- * Contains the contents of the token probability table, which may be
- * incrementally modified in the frame header. There are four dimensions to
- * the token probability array. The outermost dimension is indexed by the
- * type of plane being decoded; the next dimension is selected by the
- * position of the coefficient being decoded; the third dimension, * roughly
- * speaking, measures the "local complexity" or extent to which nearby
- * coefficients are non-zero; the fourth, and final, dimension of the token
- * probability array is indexed by the position in the token tree structure,
+ * Contains the contents of the token probability table, which may be 
+ * incrementally modified in the frame header. There are four dimensions to 
+ * the token probability array. The outermost dimension is indexed by the 
+ * type of plane being decoded; the next dimension is selected by the 
+ * position of the coefficient being decoded; the third dimension, * roughly 
+ * speaking, measures the "local complexity" or extent to which nearby 
+ * coefficients are non-zero; the fourth, and final, dimension of the token 
+ * probability array is indexed by the position in the token tree structure, 
  * as are all tree probability arrays. This structure is sent once per frame.
  *
  */
@@ -189,12 +189,12 @@ typedef struct _VAProbabilityDataBufferVP8
  * \brief VP8 Inverse Quantization Matrix Buffer Structure
  *
  * Contains quantization indices for yac(0),ydc(1),y2dc(2),y2ac(3),uvdc(4),
- * uvac(5) for each segment (0-3). When segmentation is disabled, only
+ * uvac(5) for each segment (0-3). When segmentation is disabled, only  
  * quantization_index[0][] will be used. This structure is sent once per frame.
  */
 typedef struct _VAIQMatrixBufferVP8
 {
-    /*
+    /* 
      * array first dimensional is segment and 2nd dimensional is Q index
      */
     unsigned short quantization_index[4][6];

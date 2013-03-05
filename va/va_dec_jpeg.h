@@ -36,12 +36,12 @@
 extern "C" {
 #endif
 
-#include <va/va_enc.h>
+#include <va/va.h>
 
 /**
  * \defgroup api_dec_jpeg JPEG decoding API
  *
- * WIP: this is work-in-progress API subject to change.
+ * This JPEG decoding API supports Baseline profile only.
  *
  * @{
  */
@@ -52,13 +52,11 @@ extern "C" {
  * This structure holds information from the frame header, along with
  * definitions from additional segments.
  */
-typedef struct _VAPictureParameterBufferJPEG {
+typedef struct _VAPictureParameterBufferJPEGBaseline {
     /** \brief Picture width in pixels. */
     unsigned short      picture_width;
     /** \brief Picture height in pixels. */
     unsigned short      picture_height;
-    /** \brief Sample precision (P). */
-    unsigned char       sample_precision;
 
     struct {
         /** \brief Component identifier (Ci). */
@@ -73,6 +71,9 @@ typedef struct _VAPictureParameterBufferJPEG {
     /** \brief Number of components in frame (Nf). */
     unsigned char       num_components;
 
+    /** \brief Sample precision (P). */
+    unsigned char       sample_precision;
+
     /** @name Cropping (JPEG-2000) */
     /**@{*/
     unsigned char   frame_cropping_flag;
@@ -84,7 +85,7 @@ typedef struct _VAPictureParameterBufferJPEG {
 
     /** \brief Rotation (JPEG-2000). See \c VA_ROTATION_xxx. */
     unsigned int        rotation;
-} VAPictureParameterBufferJPEG;
+} VAPictureParameterBufferJPEGBaseline, VAPictureParameterBufferJPEG;
 
 /**
  * \brief Quantization table for JPEG decoding.
@@ -97,16 +98,13 @@ typedef struct _VAPictureParameterBufferJPEG {
  * The #load_quantization_table array can be used as a hint to notify
  * the VA driver implementation about which table(s) actually changed
  * since the last submission of this buffer.
- *
- * WIP: this is work-in-progress API subject to change, and only
- * suitable to Baseline profile.
  */
-typedef struct _VAIQMatrixParameterBufferJPEG {
+typedef struct _VAIQMatrixBufferJPEGBaseline {
     /** \brief Specifies which #quantiser_table is valid. */
     unsigned char       load_quantiser_table[4];
     /** \brief Quanziation tables indexed by table identifier (Tqi). */
     unsigned char       quantiser_table[4][64];
-} VAIQMatrixParameterBufferJPEG;
+} VAIQMatrixBufferJPEGBaseline, VAIQMatrixParameterBufferJPEG;
 
 /**
  * \brief Huffman table for JPEG decoding.
@@ -119,11 +117,8 @@ typedef struct _VAIQMatrixParameterBufferJPEG {
  * The #load_huffman_table array can be used as a hint to notify the
  * VA driver implementation about which table(s) actually changed
  * since the last submission of this buffer.
- *
- * WIP: this is work-in-progress API subject to change, and only
- * suitable to Baseline profile.
  */
-typedef struct _VAHuffmanTableParameterBufferJPEG {
+typedef struct _VAHuffmanTableBufferJPEGBaseline {
     /** \brief Specifies which #huffman_table is valid. */
     unsigned char       load_huffman_table[2];
     /** \brief Huffman tables indexed by table identifier (Th). */
@@ -141,9 +136,11 @@ typedef struct _VAHuffmanTableParameterBufferJPEG {
         unsigned char   num_ac_codes[16];
         /** \brief Value associated with each Huffman code (Vij). */
         unsigned char   ac_values[162];
+        /** \brief Padding to 4-byte boundaries. Must be set to zero. */
+        unsigned char   pad[2];
         /**@}*/
     }                   huffman_table[2];
-} VAHuffmanTableParameterBufferJPEG;
+} VAHuffmanTableBufferJPEGBaseline, VAHuffmanTableParameterBufferJPEG;
 
 /**
  * \brief Slice parameter for JPEG decoding.
@@ -152,7 +149,7 @@ typedef struct _VAHuffmanTableParameterBufferJPEG {
  * definitions from additional segments. The associated slice data
  * buffer holds all entropy coded segments (ECS) in the scan.
  */
-typedef struct _VASliceParameterBufferJPEG {
+typedef struct _VASliceParameterBufferJPEGBaseline {
     /** @name Codec-independent Slice Parameter Buffer base. */
     /**@{*/
     /** \brief Number of bytes in the slice data buffer for this slice. */
@@ -183,7 +180,7 @@ typedef struct _VASliceParameterBufferJPEG {
     unsigned short      restart_interval;
     /** \brief Number of MCUs in a scan. */
     unsigned int        num_mcus;
-} VASliceParameterBufferJPEG;
+} VASliceParameterBufferJPEGBaseline, VASliceParameterBufferJPEG;
 
 /**@}*/
 

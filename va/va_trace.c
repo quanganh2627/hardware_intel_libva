@@ -352,7 +352,7 @@ void va_TraceCodedBuf(VADisplay dpy)
 
 void va_TraceSurface(VADisplay dpy)
 {
-    unsigned int i;
+    unsigned int i, j;
     unsigned int fourcc; /* following are output argument */
     unsigned int luma_stride;
     unsigned int chroma_u_stride;
@@ -364,6 +364,7 @@ void va_TraceSurface(VADisplay dpy)
     void *buffer = NULL;
     unsigned char *Y_data, *UV_data, *tmp;
     VAStatus va_status;
+    unsigned char check_sum = 0;
     DPY2INDEX(dpy);
 
     va_TraceMsg(idx, "==========dump surface data in file %s\n", trace_context[idx].trace_surface_fn);
@@ -601,11 +602,20 @@ static char * buffer_type_to_string(int type)
     case VAResidualDataBufferType: return "VAResidualDataBufferType";
     case VADeblockingParameterBufferType: return "VADeblockingParameterBufferType";
     case VAImageBufferType: return "VAImageBufferType";
+    case VAQMatrixBufferType: return "VAQMatrixBufferType";
+    case VAHuffmanTableBufferType: return "VAHuffmanTableBufferType";
+    case VAProbabilityBufferType: return "VAProbabilityBufferType";
+/* Following are encode buffer types */
     case VAEncCodedBufferType: return "VAEncCodedBufferType";
     case VAEncSequenceParameterBufferType: return "VAEncSequenceParameterBufferType";
     case VAEncPictureParameterBufferType: return "VAEncPictureParameterBufferType";
     case VAEncSliceParameterBufferType: return "VAEncSliceParameterBufferType";
+    case VAEncPackedHeaderParameterBufferType: return "VAEncPackedHeaderParameterBufferType";
+    case VAEncPackedHeaderDataBufferType: return "VAEncPackedHeaderDataBufferType";
     case VAEncMiscParameterBufferType: return "VAEncMiscParameterBufferType";
+    case VAEncMacroblockParameterBufferType: return "VAEncMacroblockParameterBufferType";
+    case VAProcPipelineParameterBufferType: return "VAProcPipelineParameterBufferType";
+    case VAProcFilterParameterBufferType: return "VAProcFilterParameterBufferType";
     default: return "UnknowBuffer";
     }
 }
@@ -1179,6 +1189,8 @@ static void va_TraceVAIQMatrixBufferH264(
     va_TraceMsg(idx, NULL);
 }
 
+
+
 static void va_TraceVAEncSequenceParameterBufferH264(
     VADisplay dpy,
     VAContextID context,
@@ -1190,7 +1202,7 @@ static void va_TraceVAEncSequenceParameterBufferH264(
 {
     VAEncSequenceParameterBufferH264 *p = (VAEncSequenceParameterBufferH264 *)data;
     DPY2INDEX(dpy);
-    unsigned int i;
+    int i;
 
     va_TraceMsg(idx, "VAEncSequenceParameterBufferH264\n");
 
@@ -2243,6 +2255,7 @@ void va_TraceEndPicture(
 
     va_TraceMsg(idx, NULL);
 }
+
 
 void va_TraceSyncSurface(
     VADisplay dpy,

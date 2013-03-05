@@ -48,12 +48,12 @@ extern int trace_flag;
         trace_func(__VA_ARGS__);                \
     }
 #define VA_TRACE_LOG(trace_func,...)            \
-    if (trace_flag & VA_TRACE_FLAG_LOG) {       \
+    if (trace_flag & VA_TRACE_FLAG_LOG) {            \
         trace_func(__VA_ARGS__);                \
     }
 #define VA_TRACE_SURFACE(trace_func,...)        \
-    if (trace_flag & (VA_TRACE_FLAG_LOG | VA_TRACE_FLAG_SURFACE | VA_TRACE_FLAG_CODEDBUF)) { \
-        trace_func(__VA_ARGS__);                                        \
+    if (trace_flag & (VA_TRACE_FLAG_SURFACE | VA_TRACE_FLAG_CODEDBUF)) {  \
+        trace_func(__VA_ARGS__);                \
     }
 
 void va_TraceInit(VADisplay dpy);

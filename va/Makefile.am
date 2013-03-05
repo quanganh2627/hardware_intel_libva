@@ -46,14 +46,14 @@ libva_source_h = \
 	va_compat.h		\
 	va_dec_jpeg.h		\
 	va_dec_vp8.h		\
+	va_drmcommon.h		\
 	va_dummy.h		\
 	va_enc.h		\
 	va_enc_h264.h		\
-	va_enc_vp8.h            \
+	va_enc_mpeg2.h		\
 	va_tpi.h		\
 	va_version.h		\
 	va_vpp.h		\
-	va_x11.h		\
 	$(NULL)
 
 libva_source_h_priv = \
@@ -79,25 +79,38 @@ libva_la_LIBADD			= $(LIBVA_LIBS) -ldl
 lib_LTLIBRARIES			+= libva-tpi.la
 libva_tpi_la_SOURCES		= va_tpi.c
 libva_tpi_la_LDFLAGS		= $(LDADD) -no-undefined
-libva_tpi_la_DEPENDENCIES	= $(libvacorelib) 
-libva_tpi_la_LIBADD		= $(libvacorelib) -ldl
+libva_tpi_la_DEPENDENCIES	= libva.la 
+libva_tpi_la_LIBADD		= libva.la -ldl
 
+if USE_DRM
+SUBDIRS				+= drm
+lib_LTLIBRARIES			+= libva-drm.la
+libva_drm_la_SOURCES		=
+libva_drm_la_LDFLAGS		= $(LDADD)
+libva_drm_la_DEPENDENCIES	= libva.la drm/libva_drm.la
+libva_drm_la_LIBADD		= libva.la drm/libva_drm.la \
+	$(LIBVA_LIBS) $(DRM_LIBS) -ldl
+endif
+
+if USE_X11
 SUBDIRS				+= x11
 lib_LTLIBRARIES			+= libva-x11.la
+libva_source_h			+= va_x11.h
 libva_x11_la_SOURCES		= 
 libva_x11_la_LDFLAGS		= $(LDADD)
-libva_x11_la_DEPENDENCIES	= $(libvacorelib) x11/libva_x11.la
-libva_x11_la_LIBADD		= $(libvacorelib) x11/libva_x11.la \
-	$(LIBVA_LIBS) $(X11_LIBS) $(XEXT_LIBS) $(DRM_LIBS) $(XFIXES_LIBS) -ldl
+libva_x11_la_DEPENDENCIES	= libva.la x11/libva_x11.la
+libva_x11_la_LIBADD		= libva.la x11/libva_x11.la \
+	$(LIBVA_LIBS) $(X11_LIBS) $(XEXT_LIBS) $(XFIXES_LIBS) $(DRM_LIBS) -ldl
+endif
 
 if USE_GLX
 SUBDIRS				+= glx
 lib_LTLIBRARIES			+= libva-glx.la
 libva_glx_la_SOURCES		=
 libva_glx_la_LDFLAGS		= $(LDADD)
-libva_glx_la_DEPENDENCIES	= $(libvacorelib) glx/libva_glx.la libva-x11.la
-libva_glx_la_LIBADD		= $(libvacorelib) glx/libva_glx.la libva-x11.la \
-	$(GL_DEPS_LIBS) -ldl
+libva_glx_la_DEPENDENCIES	= libva.la glx/libva_glx.la libva-x11.la
+libva_glx_la_LIBADD		= libva.la glx/libva_glx.la libva-x11.la \
+	$(GLX_LIBS) -ldl
 endif
 
 if USE_EGL
@@ -105,9 +118,19 @@ SUBDIRS				+= egl
 lib_LTLIBRARIES			+= libva-egl.la
 libva_egl_la_SOURCES		=
 libva_egl_la_LDFLAGS		= $(LDADD)
-libva_egl_la_DEPENDENCIES	= $(libvacorelib) egl/libva_egl.la libva-x11.la
-libva_egl_la_LIBADD		= $(libvacorelib) egl/libva_egl.la libva-x11.la \
-	$(GL_DEPS_LIBS) -ldl
+libva_egl_la_DEPENDENCIES	= libva.la egl/libva_egl.la libva-x11.la
+libva_egl_la_LIBADD		= libva.la egl/libva_egl.la libva-x11.la \
+	$(EGL_LIBS) -ldl
+endif
+
+if USE_WAYLAND
+SUBDIRS				+= wayland
+lib_LTLIBRARIES			+= libva-wayland.la
+libva_wayland_la_SOURCES	=
+libva_wayland_la_LDFLAGS	= $(LDADD)
+libva_wayland_la_DEPENDENCIES	= libva.la wayland/libva_wayland.la
+libva_wayland_la_LIBADD		= libva.la wayland/libva_wayland.la \
+	$(WAYLAND_LIBS) $(DRM_LIBS) -ldl
 endif
 
 if BUILD_DUMMY_BACKEND
@@ -115,12 +138,12 @@ SUBDIRS				+= dummy
 lib_LTLIBRARIES			+= libva-dummy.la
 libva_dummy_la_SOURCES		= 
 libva_dummy_la_LDFLAGS		= $(LDADD)
-libva_dummy_la_DEPENDENCIES	= $(libvacorelib) dummy/libva_dummy.la
-libva_dummy_la_LIBADD		= $(libvacorelib) dummy/libva_dummy.la \
+libva_dummy_la_DEPENDENCIES	= libva.la dummy/libva_dummy.la
+libva_dummy_la_LIBADD		= libva.la dummy/libva_dummy.la \
 	$(LIBVA_LIBS) $(DRM_LIBS)
 endif
 
-DIST_SUBDIRS = x11 glx egl dummy
+DIST_SUBDIRS = x11 glx egl dummy drm wayland
 
 DISTCLEANFILES = \
 	va_version.h		\
@@ -128,4 +151,5 @@ DISTCLEANFILES = \
 
 EXTRA_DIST = \
 	va_version.h.in		\
+	libva.syms		\
 	$(NULL)

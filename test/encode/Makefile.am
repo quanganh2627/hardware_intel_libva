@@ -20,19 +20,34 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-bin_PROGRAMS = h264encode avcenc
+bin_PROGRAMS = avcenc mpeg2enc h264encode
 
-INCLUDES = -I$(top_srcdir)
+INCLUDES = \
+       -Wall                           \
+       -I$(top_srcdir)                 \
+       -I$(top_srcdir)/va              \
+       $(NULL)
 
-TEST_LIBS = $(top_builddir)/va/$(libvabackendlib) $(top_builddir)/va/$(libvacorelib) -lpthread -lX11
+h264encode_SOURCES	= h264encode.c
+h264encode_CFLAGS	= -I$(top_srcdir)/test/common -g
+h264encode_LDADD	= \
+	$(top_builddir)/va/libva.la \
+	$(top_builddir)/test/common/libva-display.la \
+	-lpthread
 
-h264encode_LDADD = $(TEST_LIBS)
-h264encode_SOURCES = h264encode_x11.c
+avcenc_SOURCES		= avcenc.c
+avcenc_CFLAGS		= -I$(top_srcdir)/test/common -g
+avcenc_LDADD		= \
+	$(top_builddir)/va/libva.la \
+	$(top_builddir)/test/common/libva-display.la \
+	-lpthread
 
-avcenc_LDADD= $(TEST_LIBS)
-avcenc_SOURCES= avcenc.c
-
-EXTRA_DIST = h264encode_common.c
+mpeg2enc_SOURCES	= mpeg2enc.c
+mpeg2enc_CFLAGS		= -I$(top_srcdir)/test/common
+mpeg2enc_LDADD		= \
+	$(top_builddir)/va/libva.la \
+	$(top_builddir)/test/common/libva-display.la \
+	-lpthread
 
 valgrind:	$(bin_PROGRAMS)
 	for a in $(bin_PROGRAMS); do \

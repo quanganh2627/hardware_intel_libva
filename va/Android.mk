@@ -23,11 +23,14 @@
 # For libva
 # =====================================================
 
-ifeq ($(INTEL_VA),true)
-
 LOCAL_PATH:= $(call my-dir)
 
 LIBVA_DRIVERS_PATH = /system/lib
+
+# Version set to Android Jelly Bean
+ALOG_VERSION_REQ := 4.1
+ALOG_VERSION := $(filter $(ALOG_VERSION_REQ),$(firstword $(sort $(PLATFORM_VERSION) \
+                                   $(ALOG_VERSION_REQ))))
 
 include $(CLEAR_VARS)
 
@@ -41,7 +44,15 @@ LOCAL_SRC_FILES := \
 
 LOCAL_CFLAGS += \
 	-DANDROID \
-	-DVA_DRIVERS_PATH="\"$(LIBVA_DRIVERS_PATH)\""
+	-DVA_DRIVERS_PATH="\"$(LIBVA_DRIVERS_PATH)\"" \
+	-DLOG_TAG=\"libva\"
+
+# Android Jelly Bean defined ALOGx, older versions use LOGx
+ifeq ($(ALOG_VERSION), $(ALOG_VERSION_REQ))
+LOCAL_CFLAGS += -DANDROID_ALOG
+else
+LOCAL_CFLAGS += -DANDROID_LOG
+endif
 
 LOCAL_C_INCLUDES += \
 	$(TARGET_OUT_HEADERS)/libva \
@@ -51,15 +62,17 @@ LOCAL_C_INCLUDES += \
 LOCAL_COPY_HEADERS := \
 	va.h \
 	va_version.h \
+	va_dec_jpeg.h \
 	va_enc.h \
 	va_enc_h264.h \
 	va_enc_vp8.h \
-	va_backend.h \
-	x11/va_dricommon.h \
-	va_vpp.h \
 	va_dec_vp8.h \
 	va_dec_jpeg.h \
-	va_backend_vpp.h
+	va_backend.h \
+	va_drmcommon.h \
+	va_vpp.h \
+	va_backend_vpp.h \
+	va_enc_mpeg2.h \
 
 LOCAL_COPY_HEADERS_TO := libva/va
 
@@ -84,14 +97,16 @@ LOCAL_GENERATED_SOURCES += $(GEN)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-	android/va_android.cpp
+	android/va_android.cpp \
+	drm/va_drm_utils.c
 
 LOCAL_CFLAGS += \
-	-DANDROID 
+	-DANDROID -DLOG_TAG=\"libva-android\"
 
 LOCAL_C_INCLUDES += \
 	$(TARGET_OUT_HEADERS)/libva \
-	$(LOCAL_PATH)/x11
+	$(TARGET_OUT_HEADERS)/libdrm \
+	$(LOCAL_PATH)/drm
 
 LOCAL_COPY_HEADERS_TO := libva/va
 
@@ -100,7 +115,7 @@ LOCAL_COPY_HEADERS := va_android.h
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva-android
 
-LOCAL_SHARED_LIBRARIES := libva
+LOCAL_SHARED_LIBRARIES := libva libdrm
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -114,7 +129,7 @@ LOCAL_SRC_FILES := \
 	egl/va_egl.c
 
 LOCAL_CFLAGS += \
-	-DANDROID
+	-DANDROID -DLOG_TAG=\"libva-egl\"
 
 LOCAL_C_INCLUDES += \
 	$(TARGET_OUT_HEADERS)/libva \
@@ -139,7 +154,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := va_tpi.c
 
-LOCAL_CFLAGS += -DANDROID
+LOCAL_CFLAGS += -DANDROID -DLOG_TAG=\"libva-tpi\"
 
 LOCAL_C_INCLUDES += \
 	$(TARGET_OUT_HEADERS)/libva \
@@ -157,4 +172,3 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva-tpi
 
 include $(BUILD_SHARED_LIBRARY)
-endif

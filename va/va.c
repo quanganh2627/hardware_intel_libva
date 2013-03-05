@@ -105,49 +105,79 @@ int vaDisplayIsValid(VADisplay dpy)
 
 void va_errorMessage(const char *msg, ...)
 {
+    char buf[512], *dynbuf;
     va_list args;
+    int n, len;
 
-    fprintf(stderr, "libva error: ");
     va_start(args, msg);
-    vfprintf(stderr, msg, args);
+    len = vsnprintf(buf, sizeof(buf), msg, args);
     va_end(args);
+
+    if (len >= (int)sizeof(buf)) {
+        dynbuf = malloc(len + 1);
+        if (!dynbuf)
+            return;
+        va_start(args, msg);
+        n = vsnprintf(dynbuf, len + 1, msg, args);
+        va_end(args);
+        if (n == len)
+            va_log_error(dynbuf);
+        free(dynbuf);
+    }
+    else if (len > 0)
+        va_log_error(buf);
 }
 
 void va_infoMessage(const char *msg, ...)
 {
+    char buf[512], *dynbuf;
     va_list args;
+    int n, len;
 
-    fprintf(stderr, "libva: ");
     va_start(args, msg);
-    vfprintf(stderr, msg, args);
+    len = vsnprintf(buf, sizeof(buf), msg, args);
     va_end(args);
+
+    if (len >= (int)sizeof(buf)) {
+        dynbuf = malloc(len + 1);
+        if (!dynbuf)
+            return;
+        va_start(args, msg);
+        n = vsnprintf(dynbuf, len + 1, msg, args);
+        va_end(args);
+        if (n == len)
+            va_log_info(dynbuf);
+        free(dynbuf);
+    }
+    else if (len > 0)
+        va_log_info(buf);
 }
 
-static Bool va_checkVtable(void *ptr, char *function)
+static bool va_checkVtable(void *ptr, char *function)
 {
     if (!ptr) {
         va_errorMessage("No valid vtable entry for va%s\n", function);
-        return False;
+        return false;
     }
-    return True;
+    return true;
 }
 
-static Bool va_checkMaximum(int value, char *variable)
+static bool va_checkMaximum(int value, char *variable)
 {
     if (!value) {
         va_errorMessage("Failed to define max_%s in init\n", variable);
-        return False;
+        return false;
     }
-    return True;
+    return true;
 }
 
-static Bool va_checkString(const char* value, char *variable)
+static bool va_checkString(const char* value, char *variable)
 {
     if (!value) {
         va_errorMessage("Failed to define str_%s in init\n", variable);
-        return False;
+        return false;
     }
-    return True;
+    return true;
 }
 
 static inline int
@@ -258,7 +288,7 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
                 }
                 ctx->vtable_vpp = vtable_vpp;
 
-                if (init_func && (VA_STATUS_SUCCESS == vaStatus))
+                if (init_func && VA_STATUS_SUCCESS == vaStatus)
                     vaStatus = (*init_func)(ctx);
 
                 if (VA_STATUS_SUCCESS == vaStatus) {
@@ -276,7 +306,7 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
                     CHECK_VTABLE(vaStatus, ctx, CreateConfig);
                     CHECK_VTABLE(vaStatus, ctx, DestroyConfig);
                     CHECK_VTABLE(vaStatus, ctx, GetConfigAttributes);
-                    //CHECK_VTABLE(vaStatus, ctx, CreateSurfaces);
+                    CHECK_VTABLE(vaStatus, ctx, CreateSurfaces);
                     CHECK_VTABLE(vaStatus, ctx, DestroySurfaces);
                     CHECK_VTABLE(vaStatus, ctx, CreateContext);
                     CHECK_VTABLE(vaStatus, ctx, DestroyContext);

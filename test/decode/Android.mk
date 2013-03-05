@@ -6,20 +6,22 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-  mpeg2vldemo.cpp	\
+	mpeg2vldemo.cpp		\
+	../common/va_display.c	\
+	../common/va_display_android.cpp
 
 LOCAL_CFLAGS += \
-    -DANDROID  
+    -DANDROID
 
 LOCAL_C_INCLUDES += \
-  $(TARGET_OUT_HEADERS)/libva	\
-  $(TOPDIR)/hardware/intel/libva/va/	\
-  $(TARGET_OUT_HEADERS)/X11	
+  $(LOCAL_PATH)/../../va \
+  $(LOCAL_PATH)/../common \
+  $(TARGET_OUT_HEADERS)/libva
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE :=	mpeg2vldemo
 
-LOCAL_SHARED_LIBRARIES := libva-android libva libdl libdrm libcutils libutils libui libsurfaceflinger_client
+LOCAL_SHARED_LIBRARIES := libva libva-android libdl libdrm libcutils libutils libgui
 
 include $(BUILD_EXECUTABLE)
 
