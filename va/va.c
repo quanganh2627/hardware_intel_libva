@@ -457,15 +457,15 @@ VAStatus vaInitialize (
 
     va_infoMessage("VA-API version %s\n", VA_VERSION_S);
 
+    vaStatus = va_getDriverName(dpy, &driver_name);
+    va_infoMessage("va_getDriverName() returns %d\n", vaStatus);
+
     driver_name_env = getenv("LIBVA_DRIVER_NAME");
     if (driver_name_env && geteuid() == getuid()) {
         /* Don't allow setuid apps to use LIBVA_DRIVER_NAME */
         driver_name = strdup(driver_name_env);
         vaStatus = VA_STATUS_SUCCESS;
         va_infoMessage("User requested driver '%s'\n", driver_name);
-    } else {
-        vaStatus = va_getDriverName(dpy, &driver_name);
-        va_infoMessage("va_getDriverName() returns %d\n", vaStatus);
     }
 
     if (VA_STATUS_SUCCESS == vaStatus) {
