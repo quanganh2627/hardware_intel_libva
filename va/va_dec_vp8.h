@@ -154,17 +154,37 @@ typedef struct  _VAPictureParameterBufferVP8
     unsigned char mv_probs[2][19];
 
     VABoolCoderContextVPX bool_coder_ctx;
+} VAPictureParameterBufferVP8;
 
-    /* Partitions */
-    unsigned char num_of_partitions;
-    unsigned int partition_size[9];
+/**
+ * \brief VP8 Slice Parameter Buffer Structure
+ *
+ * This structure conveys parameters related to data partitions and should be
+ * sent once per frame.
+ *
+ */
+typedef struct  _VASliceParameterBufferVP8
+{
+    unsigned int slice_data_size;/* number of bytes in the slice data buffer for this slice */
+    unsigned int slice_data_offset;/* the offset to the first byte of slice data */
+    unsigned int slice_data_flag; /* see VA_SLICE_DATA_FLAG_XXX defintions */
 
     /*
      * offset to the first bit of MB from the first byte of slice data buffer
      */
     unsigned int macroblock_offset;
 
-} VAPictureParameterBufferVP8;
+    /* Partitions */
+    unsigned char num_of_partitions;
+    unsigned int partition_size[9];
+
+    /*
+     * slice data buffer of VASliceDataBufferType is used to send the
+     * partition data. This field specifies the offset to the first byte of
+     * partition data in the buffer.
+     */
+    unsigned int partition_data_offset;
+} VASliceParameterBufferVP8;
 
 /**
  * \brief VP8 Coefficient Probability Data Buffer Structure
