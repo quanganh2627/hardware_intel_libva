@@ -144,17 +144,6 @@ AC_ARG_ENABLE([wayland],
                     [build with VA/Wayland API support @<:@default=yes@:>@])],
     [], [enable_wayland="yes"])
 
-AC_ARG_ENABLE(dummy-driver,
-    [AC_HELP_STRING([--enable-dummy-driver],
-                    [build dummy video driver @<:@default=yes@:>@])],
-    [], [enable_dummy_driver="yes"])
-AM_CONDITIONAL(BUILD_DUMMY_DRIVER, test x$enable_dummy_driver = xyes)
-
-AC_ARG_ENABLE(dummy-backend,
-    [AC_HELP_STRING([--enable-dummy-backend],
-                    [build dummy libva backend])],
-    [], [enable_dummy_backend="no"])
-
 AC_ARG_WITH(drivers-path,
     [AC_HELP_STRING([--with-drivers-path=[[path]]],
                     [drivers path])],
@@ -204,14 +193,6 @@ if test "$ac_cv_have_gnuc_visibility_attribute" = "yes"; then
               [Defined to 1 if GCC visibility attribute is supported])
 fi
 
-# Dummy backend
-if test x$enable_dummy_backend = xyes; then
-    PKG_CHECK_MODULES([UDEV], [libudev], [libudev=yes], [libudev=no])
-fi
-if test x$libudev = xno; then
-   enable_dummy_backend=no
-fi
-AM_CONDITIONAL(BUILD_DUMMY_BACKEND, test x$enable_dummy_backend = xyes)
 
 # Check for DRM (mandatory)
 LIBDRM_VERSION=libdrm_version
@@ -310,7 +291,6 @@ AC_OUTPUT([
     Makefile
     debian.upstream/Makefile
     doc/Makefile
-    dummy_drv_video/Makefile
     pkgconfig/Makefile
     pkgconfig/libva-drm.pc
     pkgconfig/libva-egl.pc
@@ -329,7 +309,6 @@ AC_OUTPUT([
     test/vainfo/Makefile
     va/Makefile
     va/drm/Makefile
-    va/dummy/Makefile
     va/egl/Makefile
     va/glx/Makefile
     va/va_version.h
@@ -351,7 +330,5 @@ echo
 echo Installation prefix .............. : $prefix
 echo Default driver path .............. : $LIBVA_DRIVERS_PATH
 echo Extra window systems ............. : $BACKENDS
-echo build dummy backend .............. : $enable_dummy_backend
-echo Build dummy driver ............... : $enable_dummy_driver
 echo Build documentation .............. : $enable_docs
 echo
