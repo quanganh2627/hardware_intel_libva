@@ -458,7 +458,7 @@ VAStatus vaInitialize (
     va_infoMessage("VA-API version %s\n", VA_VERSION_S);
 
     vaStatus = va_getDriverName(dpy, &driver_name);
-    va_infoMessage("va_getDriverName() returns %d\n", vaStatus);
+    va_infoMessage("va_getDriverName() returns %d, driver_name is %s.\n", vaStatus, driver_name);
 
     driver_name_env = getenv("LIBVA_DRIVER_NAME");
     if (driver_name_env && geteuid() == getuid()) {
@@ -470,7 +470,7 @@ VAStatus vaInitialize (
 
     if (VA_STATUS_SUCCESS == vaStatus) {
         vaStatus = va_openDriver(dpy, driver_name);
-        va_infoMessage("va_openDriver() returns %d\n", vaStatus);
+        va_infoMessage("va_openDriver() returns %d.\n", vaStatus);
 
         *major_version = VA_MAJOR_VERSION;
         *minor_version = VA_MINOR_VERSION;

@@ -254,6 +254,10 @@ typedef enum _VAProcFilterType {
     VAProcFilterColorEnhancement,
     VAProcFilterProcAmp,
     VAProcFilterComposition,
+    /** \brief Skin Tone Enhancement. */
+    VAProcFilterSkinToneEnhancement,
+    /** \brief Total Color Correction. */
+    VAProcFilterTotalColorCorrection,
     /** \brief Number of video filters. */
     VAProcFilterCount
 } VAProcFilterType;
@@ -429,6 +433,15 @@ typedef struct _VAProcPipelineCaps {
     unsigned int        rotation_flags;
     /** \brief Blend flags. See "Video blending flags". */
     unsigned int        blend_flags;
+    /**
+     * \brief Mirroring flags.
+     *
+     * For each mirroring direction supported by the underlying hardware,
+     * the corresponding bit is set in \ref mirror_flags. See
+     * "Mirroring directions" for a description of mirroring directions.
+     *
+     */
+    unsigned int        mirror_flags;
 } VAProcPipelineCaps;
 
 /** \brief Specification of values supported by the filter. */
@@ -627,6 +640,14 @@ typedef struct _VAProcPipelineParameterBuffer {
      * is returned.
      */
     const VABlendState *blend_state;
+    /**
+     * \bried mirroring state. See "Mirroring directions".
+     * 
+     * Mirroring of an image can be performed either along the 
+     * horizontal or vertical axis. It is assumed that the rotation
+     * operation is always performed before the mirroring operation.
+     */
+    unsigned int      mirror_state;
 } VAProcPipelineParameterBuffer;
 
 /**
@@ -658,14 +679,21 @@ typedef struct _VAProcFilterParameterBuffer {
 /**@{*/
 /** 
  * \brief Bottom field first in the input frame. 
- * if this is not set then assums top field first.
+ * if this is not set then assumes top field first.
  */
-#define VA_DEINTERLACING_INPUT_BOTTOM_FIELD_FIRST	0x0001
+#define VA_DEINTERLACING_BOTTOM_FIELD_FIRST	0x0001
+#define VA_DEINTERLACING_INPUT_BOTTOM_FIELD_FIRST VA_DEINTERLACING_BOTTOM_FIELD_FIRST
 /** 
- * \brief Bottom field used in BOB deinterlacing. 
- * if this is not set then assums top field is used.
+ * \brief Bottom field used in deinterlacing. 
+ * if this is not set then assumes top field is used.
  */
-#define VA_DEINTERLACING_BOB_BOTTOM_FIELD		0x0002
+#define VA_DEINTERLACING_BOTTOM_FIELD		0x0002
+#define VA_DEINTERLACING_BOB_BOTTOM_FIELD       VA_DEINTERLACING_BOTTOM_FIELD
+/** 
+ * \brief A single field is stored in the input frame. 
+ * if this is not set then assumes the frame contains two interleaved fields.
+ */
+#define VA_DEINTERLACING_ONE_FIELD		0x0004
 /**@}*/
 
 /** \brief Deinterlacing filter parametrization. */
@@ -763,6 +791,24 @@ typedef struct _VAProcFilterParamterBufferFrameRateConversion {
      */
     VASurfaceID* output_frames;
 } VAProcFilterParameterBufferFrameRateConversion;
+
+/** \brief Total Color Correction filter parametrization. */
+typedef struct _VAProcFilterParamterBufferTotalColorCorrection {
+    /** \brief filter type. Shall be set to #VAProcFilterTotalColorCorrection. */
+    VAProcFilterType            type;
+    /** \brief TCC Red Saturation (0-255).   */
+    unsigned int        red;
+    /** \brief TCC Green Saturation (0-255). */
+    unsigned int        green;
+    /** \brief TCC Blue Saturation (0-255).  */
+    unsigned int        blue;
+    /** \brief TCC cyan Saturation (0-255).  */
+    unsigned int        cyan;
+    /** \brief TCC Magent Saturation (0-255).*/
+    unsigned int        magenta;
+    /** \brief TCC Yello Saturation (0-255). */
+    unsigned int        yellow;
+} VAProcFilterParameterBufferTotalColorCorrection;
 
 /**
  * \brief Default filter cap specification (single range value).
