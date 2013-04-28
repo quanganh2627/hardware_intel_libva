@@ -47,9 +47,9 @@ libva_source_h = \
 	va_dec_jpeg.h		\
 	va_dec_vp8.h		\
 	va_drmcommon.h		\
-	va_dummy.h		\
 	va_enc.h		\
 	va_enc_h264.h		\
+	va_enc_vp8.h		\
 	va_enc_mpeg2.h		\
 	va_tpi.h		\
 	va_version.h		\

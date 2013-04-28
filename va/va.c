@@ -458,23 +458,29 @@ VAStatus vaInitialize (
     va_infoMessage("VA-API version %s\n", VA_VERSION_S);
 
     vaStatus = va_getDriverName(dpy, &driver_name);
-    va_infoMessage("va_getDriverName() returns %d, driver_name is %s.\n", vaStatus, driver_name);
+    va_infoMessage("va_getDriverName() returns %d\n", vaStatus);
 
     driver_name_env = getenv("LIBVA_DRIVER_NAME");
-    if (driver_name_env && geteuid() == getuid()) {
+    if ((VA_STATUS_SUCCESS == vaStatus) &&
+        driver_name_env && (geteuid() == getuid())) {
         /* Don't allow setuid apps to use LIBVA_DRIVER_NAME */
+        if (driver_name) /* memory is allocated in va_getDriverName */
+            free(driver_name);
+        
         driver_name = strdup(driver_name_env);
         vaStatus = VA_STATUS_SUCCESS;
         va_infoMessage("User requested driver '%s'\n", driver_name);
     }
 
-    if (VA_STATUS_SUCCESS == vaStatus) {
+    if ((VA_STATUS_SUCCESS == vaStatus) && (driver_name != NULL)) {
         vaStatus = va_openDriver(dpy, driver_name);
-        va_infoMessage("va_openDriver() returns %d.\n", vaStatus);
+        va_infoMessage("va_openDriver() returns %d\n", vaStatus);
 
         *major_version = VA_MAJOR_VERSION;
         *minor_version = VA_MINOR_VERSION;
-    }
+    } else
+        va_errorMessage("va_getDriverName() failed with %s,driver_name=%s\n",
+                        vaErrorStr(vaStatus), driver_name);
 
     if (driver_name)
         free(driver_name);
@@ -635,7 +641,7 @@ VAStatus vaCreateConfig (
   vaStatus = ctx->vtable->vaCreateConfig ( ctx, profile, entrypoint, attrib_list, num_attribs, config_id );
 
   /* record the current entrypoint for further trace/fool determination */
-  VA_TRACE_FUNC(va_TraceCreateConfig, dpy, profile, entrypoint, attrib_list, num_attribs, config_id);
+  VA_TRACE_LOG(va_TraceCreateConfig, dpy, profile, entrypoint, attrib_list, num_attribs, config_id);
   VA_FOOL_FUNC(va_FoolCreateConfig, dpy, profile, entrypoint, attrib_list, num_attribs, config_id);
   
   return vaStatus;
@@ -766,7 +772,7 @@ VAStatus vaCreateContext (
                                       flag, render_targets, num_render_targets, context );
 
   /* keep current encode/decode resoluton */
-  VA_TRACE_FUNC(va_TraceCreateContext, dpy, config_id, picture_width, picture_height, flag, render_targets, num_render_targets, context);
+  VA_TRACE_LOG(va_TraceCreateContext, dpy, config_id, picture_width, picture_height, flag, render_targets, num_render_targets, context);
 
   return vaStatus;
 }
@@ -910,7 +916,7 @@ VAStatus vaBeginPicture (
   CHECK_DISPLAY(dpy);
   ctx = CTX(dpy);
 
-  VA_TRACE_FUNC(va_TraceBeginPicture, dpy, context, render_target);
+  VA_TRACE_LOG(va_TraceBeginPicture, dpy, context, render_target);
   VA_FOOL_RETURN();
   
   va_status = ctx->vtable->vaBeginPicture( ctx, context, render_target );

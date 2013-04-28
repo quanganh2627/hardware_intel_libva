@@ -251,9 +251,6 @@ typedef enum _VAProcFilterType {
     VAProcFilterColorStandard,
     /** \brief Frame rate conversion. */
     VAProcFilterFrameRateConversion,
-    VAProcFilterColorEnhancement,
-    VAProcFilterProcAmp,
-    VAProcFilterComposition,
     /** \brief Skin Tone Enhancement. */
     VAProcFilterSkinToneEnhancement,
     /** \brief Total Color Correction. */
@@ -682,13 +679,11 @@ typedef struct _VAProcFilterParameterBuffer {
  * if this is not set then assumes top field first.
  */
 #define VA_DEINTERLACING_BOTTOM_FIELD_FIRST	0x0001
-#define VA_DEINTERLACING_INPUT_BOTTOM_FIELD_FIRST VA_DEINTERLACING_BOTTOM_FIELD_FIRST
 /** 
  * \brief Bottom field used in deinterlacing. 
  * if this is not set then assumes top field is used.
  */
 #define VA_DEINTERLACING_BOTTOM_FIELD		0x0002
-#define VA_DEINTERLACING_BOB_BOTTOM_FIELD       VA_DEINTERLACING_BOTTOM_FIELD
 /** 
  * \brief A single field is stored in the input frame. 
  * if this is not set then assumes the frame contains two interleaved fields.
@@ -840,15 +835,6 @@ typedef struct _VAProcFilterCapColorStandard {
     /** \brief Color standard type. */
     VAProcColorStandardType     type;
 } VAProcFilterCapColorStandard;
-
-/** \brief Capabilities specification for the amplifier filter. */
-typedef struct _VAProcFilterCapProcAmp
-{
-    VAProcFilterValueRange brightness_range;
-    VAProcFilterValueRange contrast_range;
-    VAProcFilterValueRange saturation_range;
-    VAProcFilterValueRange hue_range;
-} VAProcFilterCapProcAmp;
 
 /**
  * \brief Queries video processing filters.

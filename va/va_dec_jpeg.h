@@ -70,22 +70,7 @@ typedef struct _VAPictureParameterBufferJPEGBaseline {
     }                   components[255];
     /** \brief Number of components in frame (Nf). */
     unsigned char       num_components;
-
-    /** \brief Sample precision (P). */
-    unsigned char       sample_precision;
-
-    /** @name Cropping (JPEG-2000) */
-    /**@{*/
-    unsigned char   frame_cropping_flag;
-    unsigned short  frame_crop_left_offset;
-    unsigned short  frame_crop_right_offset;
-    unsigned short  frame_crop_top_offset;
-    unsigned short  frame_crop_bottom_offset;
-    /**@}*/
-
-    /** \brief Rotation (JPEG-2000). See \c VA_ROTATION_xxx. */
-    unsigned int        rotation;
-} VAPictureParameterBufferJPEGBaseline, VAPictureParameterBufferJPEG;
+} VAPictureParameterBufferJPEGBaseline;
 
 /**
  * \brief Quantization table for JPEG decoding.
@@ -104,7 +89,7 @@ typedef struct _VAIQMatrixBufferJPEGBaseline {
     unsigned char       load_quantiser_table[4];
     /** \brief Quanziation tables indexed by table identifier (Tqi). */
     unsigned char       quantiser_table[4][64];
-} VAIQMatrixBufferJPEGBaseline, VAIQMatrixParameterBufferJPEG;
+} VAIQMatrixBufferJPEGBaseline;
 
 /**
  * \brief Huffman table for JPEG decoding.
@@ -140,7 +125,7 @@ typedef struct _VAHuffmanTableBufferJPEGBaseline {
         unsigned char   pad[2];
         /**@}*/
     }                   huffman_table[2];
-} VAHuffmanTableBufferJPEGBaseline, VAHuffmanTableParameterBufferJPEG;
+} VAHuffmanTableBufferJPEGBaseline;
 
 /**
  * \brief Slice parameter for JPEG decoding.
@@ -180,7 +165,7 @@ typedef struct _VASliceParameterBufferJPEGBaseline {
     unsigned short      restart_interval;
     /** \brief Number of MCUs in a scan. */
     unsigned int        num_mcus;
-} VASliceParameterBufferJPEGBaseline, VASliceParameterBufferJPEG;
+} VASliceParameterBufferJPEGBaseline;
 
 /**@}*/
 
