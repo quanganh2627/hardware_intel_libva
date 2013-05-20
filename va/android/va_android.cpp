@@ -115,11 +115,13 @@ static VAStatus va_DisplayContextGetDriverName (
         return VA_STATUS_ERROR_UNKNOWN;
     }
     drm_state->auth_type = VA_DRM_AUTH_CUSTOM;
-    *driver_name = NULL;
+
+    if (driver_name == NULL)
+        return VA_STATUS_ERROR_UNKNOWN;
 
     if (strncmp((char *)ctx->native_dpy, "libva_driver_name=", 18) == 0) {
-        *driver_name = strdup((char *)ctx->native_dpy + 18);
-        if (!driver_name)
+            *driver_name = strdup((char *)ctx->native_dpy + 18);
+        if (*driver_name == NULL)
             return VA_STATUS_ERROR_ALLOCATION_FAILED;
         else
             return VA_STATUS_SUCCESS;
