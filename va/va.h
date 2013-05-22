@@ -406,15 +406,18 @@ typedef enum
      */
     VAConfigAttribEncMacroblockInfo     = 16,
     /**
-     * \brief Auto reconstructed/reference frame management. Read/Write.
+     * \brief Auto reference frame management. Read-Write.
      *
-     * This attribute determines whether the driver supports auto reconstructed
-     * and reference management.
+     * This attribute determines whether the driver supports auto reference management
      *
-     * If driver supports, and application sets it to true, application doesn't need
-     * to set the reconstructed/reference frames information in #VAEncMacroblockParameterBufferH264
-     * and #VAEncSliceParameterBufferH264. Driver will manage the reference frames internally
-     * and choose the best reference frames.
+     * If driver supports, and application sets it to true, application only needs to set scratch
+     * reference surfaces via VAPictureParameterBufferH264: ReferenceFrames. The scratch surfaces
+     * number is determined by the maximum number of RefPicList0 and RefPicList0 which can be queried from 
+     * VAConfigAttribEncMaxRefFrames. Application doesn't need to set VAPictureParameterBufferH264:CurrPic
+     * and VAEncSliceParameterBufferH264:RefPicList. Driver will manage the reference frames internally 
+     * and choose the best reference frames. Which scratch surface is used for reconstructed frame and which
+     * surfaces are used for reference frames will be fedback via VACodedBufferSegment
+     *
      */
     VAConfigAttribEncAutoReference     = 17,
     /**@}*/
