@@ -936,6 +936,10 @@ typedef enum
      * color balance (#VAProcFilterParameterBufferColorBalance), etc.
      */
     VAProcFilterParameterBufferType     = 42,
+
+    VAParsePictureParameterBufferType   = 43,
+    VAParseSliceHeaderGroupBufferType   = 44,
+
     VABufferTypeMax
 } VABufferType;
 
@@ -1804,7 +1808,6 @@ VAStatus vaBufferSetNumElements (
     unsigned int num_elements /* in */
 );
 
-
 /*
  * device independent data structure for codedbuffer
  */
@@ -1872,7 +1875,110 @@ typedef  struct _VACodedBufferSegment  {
      */
     void               *next;
 } VACodedBufferSegment;
-     
+
+/*
+ * H.264 Parsed Slice Header Group Info
+ * After slice header is parsed by decode hardware,
+ * group slice header buffer will be returned to client.
+ * client will retrieve multiple parsed slice header infos from that buffer
+ */
+
+/* H.264 Parsed Slice Header Info */
+typedef struct _VAParseSliceHeaderGroupBuffer
+{
+	unsigned int size;
+
+	unsigned char nal_ref_idc;
+	unsigned char nal_unit_type;
+	unsigned char slice_type;
+	unsigned char redundant_pic_cnt;
+
+	unsigned short first_mb_in_slice;
+	char slice_qp_delta;
+	char slice_qs_delta;
+
+	unsigned char luma_log2_weight_denom;
+	unsigned char chroma_log2_weight_denom;
+	unsigned char cabac_init_idc;
+	unsigned char pic_order_cnt_lsb;
+
+	unsigned char pic_parameter_set_id;
+	unsigned short idr_pic_id;
+	unsigned char colour_plane_id;
+
+	char slice_alpha_c0_offset_div2;
+	char slice_beta_offset_div2;
+	unsigned char slice_group_change_cycle;
+	unsigned char disable_deblocking_filter_idc;
+
+	unsigned int frame_num;
+	int delta_pic_order_cnt_bottom;
+	int delta_pic_order_cnt[2];
+
+	unsigned char num_reorder_cmds[2];
+	unsigned char num_ref_active_minus1[2];
+
+	unsigned int weights_present[2][2];
+
+	unsigned short num_mem_man_ops;
+
+	union {
+		struct {
+			unsigned field_pic_flag                     : 1;
+			unsigned bottom_field_flag                  : 1;
+			unsigned num_ref_idx_active_override_flag   : 1;
+			unsigned direct_spatial_mv_pred_flag        : 1;
+			unsigned no_output_of_prior_pics_flag       : 1;
+			unsigned long_term_reference_flag           : 1;
+			unsigned idr_flag                           : 1;
+			unsigned anchor_pic_flag                    : 1;
+			unsigned inter_view_flag                    : 1;
+		} bits;
+
+		unsigned short value;
+	} flags;
+
+//MVC
+	unsigned short view_id;
+	unsigned char priority_id;
+	unsigned char temporal_id;
+} VAParseSliceHeaderGroupBuffer;
+
+typedef struct _VAParsePictureParameterBuffer {
+    VABufferID frame_buf_id;
+    VABufferID slice_headers_buf_id;
+    unsigned int frame_size;
+    unsigned int slice_headers_size;
+    union {
+        struct {
+            unsigned frame_mbs_only_flag : 1;
+            unsigned pic_order_present_flag : 1;
+            unsigned delta_pic_order_always_zero_flag : 1;
+            unsigned redundant_pic_cnt_present_flag : 1;
+            unsigned weighted_pred_flag : 1;
+            unsigned entropy_coding_mode_flag : 1;
+            unsigned deblocking_filter_control_present_flag : 1;
+            unsigned weighted_bipred_idc : 1;
+        } bits;
+        unsigned int value;
+    } flags;
+
+    unsigned short expected_pic_parameter_set_id;
+    unsigned char num_slice_groups_minus1;
+    unsigned char slice_group_map_type;
+    unsigned char log2_slice_group_change_cycle;
+    unsigned char chroma_format_idc;
+
+    unsigned char log2_max_pic_order_cnt_lsb_minus4;
+    unsigned char pic_order_cnt_type;
+    unsigned char log2_max_frame_num_minus4;
+
+    /* additionally */
+    unsigned char residual_colour_transform_flag;
+    unsigned char num_ref_idc_l0_active_minus1;
+    unsigned char num_ref_idc_l1_active_minus1;
+} VAParsePictureParameterBuffer;
+
 /*
  * Map data store of the buffer into the client's address space
  * vaCreateBuffer() needs to be called with "data" set to NULL before
