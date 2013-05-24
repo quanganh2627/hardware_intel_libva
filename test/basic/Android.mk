@@ -244,7 +244,7 @@ LOCAL_CFLAGS += \
 
 LOCAL_C_INCLUDES += \
   $(TARGET_OUT_HEADERS)/libva	\
-  $(TOPDIR)/hardware/intel/libva/va/
+  $(TOPDIR)/vendor/intel/hardware/libva/va/
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE :=	test_vaSurfaceAttrib
