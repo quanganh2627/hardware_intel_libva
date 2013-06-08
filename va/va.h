@@ -406,20 +406,41 @@ typedef enum
      */
     VAConfigAttribEncMacroblockInfo     = 16,
     /**
-     * \brief Auto reference frame management. Read-Write.
+     * \brief Auto reference frame management. Read-only
      *
      * This attribute determines whether the driver supports auto reference management
      *
-     * If driver supports, and application sets it to true, application only needs to set scratch
-     * reference surfaces via VAPictureParameterBufferH264: ReferenceFrames. The scratch surfaces
-     * number is determined by the maximum number of RefPicList0 and RefPicList0 which can be queried from 
+     * If driver supports, application only needs to set scratch reference surfaces
+     * via VAPictureParameterBufferH264:ReferenceFrames. The scratch surfaces number is
+     * determined by the maximum number of RefPicList0 and RefPicList0 which can be queried from
      * VAConfigAttribEncMaxRefFrames. Application doesn't need to set VAPictureParameterBufferH264:CurrPic
-     * and VAEncSliceParameterBufferH264:RefPicList. Driver will manage the reference frames internally 
+     * and VAEncSliceParameterBufferH264:RefPicList. Driver will manage the reference frames internally
      * and choose the best reference frames. Which scratch surface is used for reconstructed frame and which
      * surfaces are used for reference frames will be fedback via VACodedBufferSegment
-     *
      */
     VAConfigAttribEncAutoReference     = 17,
+    /**
+     * \brief Maximum picture width. Read-only.
+     *
+     * This attribute determines the maximum picture width the driver supports
+     * for a given configuration.
+     */
+    VAConfigAttribMaxPictureWidth     = 18,
+    /**
+     * \brief Maximum picture height. Read-only.
+     *
+     * This attribute determines the maximum picture height the driver supports
+     * for a given configuration.
+     */
+    VAConfigAttribMaxPictureHeight    = 19,
+    /**
+     * \brief JPEG encoding attribute. Read-only.
+     *
+     * This attribute exposes a number of capabilities of the underlying
+     * JPEG implementation. The attribute value is partitioned into fields as defined in the 
+     * VAConfigAttribValEncJPEG union.
+     */
+    VAConfigAttribEncJPEG             = 20,
     /**@}*/
     VAConfigAttribTypeMax
 } VAConfigAttribType;
@@ -483,6 +504,8 @@ typedef struct _VAConfigAttrib {
 #define VA_ENC_PACKED_HEADER_SLICE      0x00000004
 /** \brief Driver supports misc packed headers. e.g. SEI for H.264. */
 #define VA_ENC_PACKED_HEADER_MISC       0x00000008
+/** \brief Driver supports raw packed header, see VAEncPackedHeaderRawData */
+#define VA_ENC_PACKED_HEADER_RAW_DATA   0x0000000C
 /**@}*/
 
 /** @name Attribute values for VAConfigAttribEncInterlaced */
@@ -508,6 +531,25 @@ typedef struct _VAConfigAttrib {
 /** \brief Driver supports an arbitrary number of rows per slice. */
 #define VA_ENC_SLICE_STRUCTURE_ARBITRARY_MACROBLOCKS    0x00000002
 /**@}*/
+
+/** \brief Attribute value for VAConfigAttribEncJPEG */
+typedef union _VAConfigAttribValEncJPEG {
+    struct {
+        /** \brief set to 1 for arithmatic coding. */
+        unsigned int arithmatic_coding_mode : 1;
+        /** \brief set to 1 for progressive dct. */
+        unsigned int progressive_dct_mode : 1;
+        /** \brief set to 1 for non-interleaved. */
+        unsigned int non_interleaved_mode : 1;
+        /** \brief set to 1 for differential. */
+        unsigned int differential_mode : 1;
+        unsigned int max_num_components : 3;
+        unsigned int max_num_scans : 4;
+        unsigned int max_num_huffman_tables : 3;
+        unsigned int max_num_quantization_tables : 3;
+    } bits;
+    unsigned int value;
+} VAConfigAttribValEncJPEG;
 
 /*
  * if an attribute is not applicable for a given
@@ -777,37 +819,48 @@ typedef struct _VASurfaceAttribExternalBuffers {
 /**@}*/
 
 /**
- * \brief Get surface attributes for the supplied config.
+ * \brief Queries surface attributes for the supplied config.
  *
- * This function retrieves the surface attributes matching the supplied
- * config. The caller shall provide an \c attrib_list with all attributes
- * to be retrieved. Upon successful return, the attributes in \c attrib_list
- * are updated with the requested value. Unknown attributes or attributes
- * that are not supported for the given config will have their \c flags
- * field set to \c VA_SURFACE_ATTRIB_NOT_SUPPORTED.
+ * Unlike vaGetSurfaceAttributes(), this function queries for all
+ * supported attributes for the supplied VA @config. In particular, if
+ * the underlying hardware supports the creation of VA surfaces in
+ * various formats, then this function will enumerate all pixel
+ * formats that are supported.
+ *
+ * The \c attrib_list array is allocated by the user and \c
+ * num_attribs shall be initialized to the number of allocated
+ * elements in that array. Upon successful return, the actual number
+ * of attributes will be overwritten into \c num_attribs. Otherwise,
+ * \c VA_STATUS_ERROR_MAX_NUM_EXCEEDED is returned and \c num_attribs
+ * is adjusted to the number of elements that would be returned if
+ * enough space was available.
+ *
+ * Note: it is perfectly valid to pass NULL to the \c attrib_list
+ * argument when vaQuerySurfaceAttributes() is used to determine the
+ * actual number of elements that need to be allocated.
  *
  * @param[in] dpy               the VA display
  * @param[in] config            the config identifying a codec or a video
  *     processing pipeline
- * @param[in,out] attrib_list   the list of attributes on input, with at
- *     least \c type fields filled in, and possibly \c value fields whenever
- *     necessary. The updated list of attributes and flags on output
- * @param[in] num_attribs       the number of attributes supplied in the
- *     \c attrib_list array
+ * @param[out] attrib_list      the output array of #VASurfaceAttrib elements
+ * @param[in,out] num_attribs   the number of elements allocated on
+ *      input, the number of elements actually filled in output
  */
 VAStatus
-vaGetSurfaceAttributes(
+vaQuerySurfaceAttributes(
     VADisplay           dpy,
     VAConfigID          config,
     VASurfaceAttrib    *attrib_list,
-    unsigned int        num_attribs
+    unsigned int       *num_attribs
 );
 
 /**
  * \brief Creates an array of surfaces
  *
  * Creates an array of surfaces. The optional list of attributes shall
- * be constructed and verified through vaGetSurfaceAttributes().
+ * be constructed and validated through vaGetSurfaceAttributes() or
+ * constructed based based on what the underlying hardware could
+ * expose through vaQuerySurfaceAttributes().
  *
  * @param[in] dpy               the VA display
  * @param[in] format            the desired surface format. See \c VA_RT_FORMAT_*
@@ -936,10 +989,8 @@ typedef enum
      * color balance (#VAProcFilterParameterBufferColorBalance), etc.
      */
     VAProcFilterParameterBufferType     = 42,
-
     VAParsePictureParameterBufferType   = 43,
     VAParseSliceHeaderGroupBufferType   = 44,
-
     VABufferTypeMax
 } VABufferType;
 
@@ -967,8 +1018,9 @@ typedef enum {
      * \brief Packed raw header. 
      * 
      * Packed raw data header can be used by the client to insert a header  
-     * into the bitstream data buffer at the point it is passed, without 
-     * any handling or interpretation by the implementation.  
+     * into the bitstream data buffer at the point it is passed, the driver 
+     * will handle the raw packed header based on "has_emulation_bytes" field
+     * in the packed header parameter structure.
      */
     VAEncPackedHeaderRawData    = 4,
     /** \brief Misc packed header. See codec-specific definitions. */
@@ -1103,28 +1155,6 @@ typedef struct _VASliceParameterBufferBase
     unsigned int slice_data_offset;	/* the offset to the first byte of slice data */
     unsigned int slice_data_flag;	/* see VA_SLICE_DATA_FLAG_XXX definitions */
 } VASliceParameterBufferBase;
-
-
-/****************************
- * JEPG data structure
- ***************************/
-typedef struct _VAQMatrixBufferJPEG
-{
-    int load_lum_quantiser_matrix;
-    int load_chroma_quantiser_matrix;
-    unsigned char lum_quantiser_matrix[64];
-    unsigned char chroma_quantiser_matrix[64];
-} VAQMatrixBufferJPEG;
-
-typedef struct _VAEncPictureParameterBufferJPEG
-{
-    VASurfaceID reconstructed_picture;
-    unsigned short picture_width;
-    unsigned short picture_height;
-    VABufferID coded_buf;
-} VAEncPictureParameterBufferJPEG;
-
-#include <va/va_dec_jpeg.h>
 
 /****************************
  * MPEG-2 data structures
@@ -1845,6 +1875,16 @@ VAStatus vaBufferSetNumElements (
  * processing the coded buffer.
  */
 #define VA_CODED_BUF_STATUS_SINGLE_NALU                 0x10000000	
+
+/**
+ * \brief The coded buffer segment contains a private data. 
+ *
+ * This flag indicates that the coded buffer segment contains 
+ * private data. This flag can be used to exchange private data
+ * between the client and the driver. Private data should follow
+ * regular coded data in the coded buffer segement list. 
+ */
+#define VA_CODED_BUF_STATUS_PRIVATE_DATA                 0x80000000	
 
 /**
  * \brief Coded buffer segment.

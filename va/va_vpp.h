@@ -247,14 +247,14 @@ typedef enum _VAProcFilterType {
     VAProcFilterSharpening,
     /** \brief Color balance parameters. */
     VAProcFilterColorBalance,
-    /** \brief Color standard conversion. */
-    VAProcFilterColorStandard,
     /** \brief Frame rate conversion. */
     VAProcFilterFrameRateConversion,
     /** \brief Skin Tone Enhancement. */
     VAProcFilterSkinToneEnhancement,
     /** \brief Total Color Correction. */
     VAProcFilterTotalColorCorrection,
+    /** \brief Non-Linear Anamorphic Scaling. */
+    VAProcFilterNonLinearAnamorphicScaling,
     /** \brief Number of video filters. */
     VAProcFilterCount
 } VAProcFilterType;
@@ -312,9 +312,36 @@ typedef enum _VAProcColorStandardType {
     VAProcColorStandardSMPTE240M,
     /** \brief Generic film. */
     VAProcColorStandardGenericFilm,
+    /** \brief sRGB. */
+    VAProcColorStandardSRGB,
+    /** \brief stRGB. */
+    VAProcColorStandardSTRGB,
+    /** \brief xvYCC601. */
+    VAProcColorStandardXVYCC601,
+    /** \brief xvYCC709. */
+    VAProcColorStandardXVYCC709,
     /** \brief Number of color standards. */
     VAProcColorStandardCount
 } VAProcColorStandardType;
+
+/** \brief Total color correction types. */
+typedef enum _VAProcTotalColorCorrectionType {
+    VAProcTotalColorCorrectionNone = 0,
+    /** \brief Red Saturation. */
+    VAProcTotalColorCorrectionRed,
+    /** \brief Green Saturation. */
+    VAProcTotalColorCorrectionGreen,
+    /** \brief Blue Saturation. */
+    VAProcTotalColorCorrectionBlue,
+    /** \brief Cyan Saturation. */
+    VAProcTotalColorCorrectionCyan,
+    /** \brief Magenta Saturation. */
+    VAProcTotalColorCorrectionMagenta,
+    /** \brief Yellow Saturation. */
+    VAProcTotalColorCorrectionYellow,
+    /** \brief Number of color correction attributes. */
+    VAProcTotalColorCorrectionCount
+} VAProcTotalColorCorrectionType;
 
 /** @name Video blending flags */
 /**@{*/
@@ -560,8 +587,7 @@ typedef struct _VAProcPipelineParameterBuffer {
      *   \c VA_BOTTOM_FIELD. Note that any deinterlacing filter
      *   (#VAProcFilterDeinterlacing) will override those flags.
      * - Color space conversion: \c VA_SRC_BT601, \c VA_SRC_BT709,
-     *   \c VA_SRC_SMPTE_240. Note that any color standard filter
-     *   (#VAProcFilterColorStandard) will override those flags.
+     *   \c VA_SRC_SMPTE_240. 
      * - Scaling: \c VA_FILTER_SCALING_DEFAULT, \c VA_FILTER_SCALING_FAST,
      *   \c VA_FILTER_SCALING_HQ, \c VA_FILTER_SCALING_NL_ANAMORPHIC.
      */
@@ -762,14 +788,6 @@ typedef struct _VAProcFilterParameterBufferColorBalance {
     float                       value;
 } VAProcFilterParameterBufferColorBalance;
 
-/** \brief Color standard filter parametrization. */
-typedef struct _VAProcFilterParameterBufferColorStandard {
-    /** \brief Filter type. Shall be set to #VAProcFilterColorStandard. */
-    VAProcFilterType            type;
-    /** \brief Color standard to use. */
-    VAProcColorStandardType     standard;
-} VAProcFilterParameterBufferColorStandard;
-
 /** \brief Frame rate conversion filter parametrization. */
 typedef struct _VAProcFilterParamterBufferFrameRateConversion {
     /** \brief filter type. Shall be set to #VAProcFilterFrameRateConversion. */
@@ -787,23 +805,27 @@ typedef struct _VAProcFilterParamterBufferFrameRateConversion {
     VASurfaceID* output_frames;
 } VAProcFilterParameterBufferFrameRateConversion;
 
-/** \brief Total Color Correction filter parametrization. */
-typedef struct _VAProcFilterParamterBufferTotalColorCorrection {
-    /** \brief filter type. Shall be set to #VAProcFilterTotalColorCorrection. */
-    VAProcFilterType            type;
-    /** \brief TCC Red Saturation. */
-    float        red;
-    /** \brief TCC Green Saturation. */
-    float        green;
-    /** \brief TCC Blue Saturation. */
-    float        blue;
-    /** \brief TCC cyan Saturation. */
-    float        cyan;
-    /** \brief TCC Magenta Saturation. */
-    float        magenta;
-    /** \brief TCC Yello Saturation. */
-    float        yellow;
+/** \brief Total color correction filter parametrization. */
+typedef struct _VAProcFilterParameterBufferTotalColorCorrection {
+    /** \brief Filter type. Shall be set to #VAProcFilterTotalColorCorrection. */
+    VAProcFilterType                  type;
+    /** \brief Color to correct. */
+    VAProcTotalColorCorrectionType    attrib;
+    /** \brief Color correction value. */
+    float                             value;
 } VAProcFilterParameterBufferTotalColorCorrection;
+
+/** \brief Non-Linear Anamorphic Scaling filter parametrization. */
+typedef struct _VAProcFilterParameterBufferNonLinearAnamorphicScaling {
+    /** \brief filter type. Shall be set to #VAProcFilterNonLinearAnamorphicScaling. */
+    VAProcFilterType    type;
+    /** \brief Vertical crop. */
+    float               vertical_crop;
+    /** \brief HLinear region. */
+    float               horizontal_linear_region;
+    /** \brief Non-linear crop. */
+    float               nonlinear_crop;
+} VAProcFilterParameterBufferNonLinearAnamorphicScaling;
 
 /**
  * \brief Default filter cap specification (single range value).
@@ -830,27 +852,23 @@ typedef struct _VAProcFilterCapColorBalance {
     VAProcFilterValueRange      range;
 } VAProcFilterCapColorBalance;
 
-/** \brief Capabilities specification for the color standard filter. */
-typedef struct _VAProcFilterCapColorStandard {
-    /** \brief Color standard type. */
-    VAProcColorStandardType     type;
-} VAProcFilterCapColorStandard;
-
 /** \brief Capabilities specification for the Total Color Correction filter. */
 typedef struct _VAProcFilterCapTotalColorCorrection {
-    /** \brief Range of supported values for red saturation. */
-    VAProcFilterValueRange      red_range;
-    /** \brief Range of supported values for green saturation. */
-    VAProcFilterValueRange      green_range;
-    /** \brief Range of supported values for blue saturation. */
-    VAProcFilterValueRange      blue_range;
-    /** \brief Range of supported values for cyan saturation. */
-    VAProcFilterValueRange      cyan_range;
-    /** \brief Range of supported values for magenta saturation. */
-    VAProcFilterValueRange      magenta_range;
-    /** \brief Range of supported values for yellow saturation. */
-    VAProcFilterValueRange      yellow_range;
+    /** \brief Color to correct. */
+    VAProcTotalColorCorrectionType    type;
+    /** \brief Range of supported values for the specified color. */
+    VAProcFilterValueRange            range;
 } VAProcFilterCapTotalColorCorrection;
+
+/** \brief Capabilities specification for the Non-Linear Anamorphic Scaling filter. */
+typedef struct _VAProcFilterCapNonLinearAnamorphicScaling {
+    /** \brief Range of supported values for the vertical crop. */
+    VAProcFilterValueRange      vertical_crop_range;
+    /** \brief Range of supported values for the horizontal linear region. */
+    VAProcFilterValueRange      horizontal_linear_region_range;
+    /** \brief Range of supported values for the non-linear crop. */
+    VAProcFilterValueRange      nonlinear_crop_range;
+} VAProcFilterCapNonLinearAnamorphicScaling;
 
 /**
  * \brief Queries video processing filters.

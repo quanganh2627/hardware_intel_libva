@@ -232,23 +232,3 @@ LOCAL_SHARED_LIBRARIES := libva-android libva libdl libdrm libcutils libutils li
 
 include $(BUILD_EXECUTABLE)
 
-# For test_vaSurfaceAttrib
-# =====================================================
-include $(CLEAR_VARS)
-
-LOCAL_SRC_FILES := \
-  test_vaSurfaceAttrib.c
-
-LOCAL_CFLAGS += \
-    -DANDROID
-
-LOCAL_C_INCLUDES += \
-  $(TARGET_OUT_HEADERS)/libva	\
-  $(TOPDIR)/vendor/intel/hardware/libva/va/
-
-LOCAL_MODULE_TAGS := optional
-LOCAL_MODULE :=	test_vaSurfaceAttrib
-
-LOCAL_SHARED_LIBRARIES := libva-android libva libdl libdrm libcutils libutils libui libsurfaceflinger
-
-include $(BUILD_EXECUTABLE)
