@@ -58,6 +58,8 @@ VAStatus vaCreateSurfacesWithAttribute (
   CHECK_DISPLAY(dpy);
   ctx = CTX(dpy);
 
+  printf("WARNING: vaCreateSurfacesWithAttribute will be removed, please use vaCreateSurfaces\n");
+  
   tpi = (struct VADriverVTableTPI *)ctx->vtable_tpi;
   if (tpi && tpi->vaCreateSurfacesWithAttribute) {
       return tpi->vaCreateSurfacesWithAttribute( ctx, width, height, format, num_surfaces, surfaces, attribute_tpi);
@@ -98,20 +100,22 @@ VAStatus vaPutSurfaceBuf (
 }
 
 VAStatus vaSetTimestampForSurface(
-    VADisplay dpy,
-    VASurfaceID surface,
-    long long timestamp
+       VADisplay dpy,
+       VASurfaceID surface,
+       long long timestamp
 )
 {
-    VADriverContextP ctx;
-    struct VADriverVTableTPI *tpi;
-    CHECK_DISPLAY(dpy);
-    ctx = CTX(dpy);
+   VADriverContextP ctx;
+   struct VADriverVTableTPI *tpi;
+   CHECK_DISPLAY(dpy);
+   ctx = CTX(dpy);
 
-    tpi = ( struct VADriverVTableTPI *)ctx->vtable_tpi;
-    if (tpi && tpi->vaSetTimestampForSurface) {
-        return tpi->vaSetTimestampForSurface(ctx, surface, timestamp);
-    } else
-        return VA_STATUS_ERROR_UNIMPLEMENTED;
+   tpi = ( struct VADriverVTableTPI *)ctx->vtable_tpi;
+   if (tpi && tpi->vaSetTimestampForSurface) {
+       return tpi->vaSetTimestampForSurface(ctx, surface, timestamp);
+   } else
+       return VA_STATUS_ERROR_UNIMPLEMENTED;
 
 }
+
+

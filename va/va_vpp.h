@@ -239,14 +239,14 @@ typedef enum _VAProcFilterType {
     VAProcFilterNone = 0,
     /** \brief Noise reduction filter. */
     VAProcFilterNoiseReduction,
-    /** \brief Deblocking filter. */
-    VAProcFilterDeblocking,
     /** \brief Deinterlacing filter. */
     VAProcFilterDeinterlacing,
     /** \brief Sharpening filter. */
     VAProcFilterSharpening,
     /** \brief Color balance parameters. */
     VAProcFilterColorBalance,
+    /** \brief Deblocking filter. */
+    VAProcFilterDeblocking,
     /** \brief Frame rate conversion. */
     VAProcFilterFrameRateConversion,
     /** \brief Skin Tone Enhancement. */
@@ -466,6 +466,8 @@ typedef struct _VAProcPipelineCaps {
      *
      */
     unsigned int        mirror_flags;
+    /** \brief Number of additional output surfaces supported by the pipeline  */
+    unsigned int        num_additional_outputs;
 } VAProcPipelineCaps;
 
 /** \brief Specification of values supported by the filter. */
@@ -671,6 +673,10 @@ typedef struct _VAProcPipelineParameterBuffer {
      * operation is always performed before the mirroring operation.
      */
     unsigned int      mirror_state;
+    /** \brief Array of additional output surfaces. */
+    VASurfaceID        *additional_outputs;
+    /** \brief Number of additional output surfaces. */
+    unsigned int        num_additional_outputs;
 } VAProcPipelineParameterBuffer;
 
 /**

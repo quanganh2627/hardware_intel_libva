@@ -87,7 +87,7 @@ VAStatus vaPutSurfaceBuf (
     unsigned int flags /* de-interlacing flags */
 );
 
-VAStatus vaSetTimestampForSurface(
+VAStatus vaSetTimestampForSurface (
     VADisplay dpy,
     VASurfaceID surface,
     long long timestamp

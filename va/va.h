@@ -441,6 +441,15 @@ typedef enum
      * VAConfigAttribValEncJPEG union.
      */
     VAConfigAttribEncJPEG             = 20,
+    /**
+     * \brief Encoding quality range attribute. Read-only.
+     *
+     * This attribute conveys whether the driver supports different quality level settings
+     * for encoding. A value less than or equal to 1 means that the encoder only has a single
+     * quality setting, and a value greater than 1 represents the number of quality levels 
+     * that can be configured. e.g. a value of 2 means there are two distinct quality levels. 
+     */
+    VAConfigAttribEncQualityRange     = 21,
     /**@}*/
     VAConfigAttribTypeMax
 } VAConfigAttribType;
@@ -1004,6 +1013,7 @@ typedef enum
     VAEncMiscParameterTypeMaxFrameSize  = 4,
     /** \brief Buffer type used for HRD parameters. */
     VAEncMiscParameterTypeHRD           = 5,
+    VAEncMiscParameterTypeQualityLevel  = 6,
 } VAEncMiscParameterType;
 
 /** \brief Packed header type. */
@@ -1077,7 +1087,11 @@ typedef struct _VAEncMiscParameterRateControl
     unsigned int window_size;
     /* initial QP at I frames */
     unsigned int initial_qp;
+    /* min_qp/max_qp of encode frames
+     * If set them to 0, encode will choose the best QP according to rate control
+     */
     unsigned int min_qp;
+    unsigned int max_qp;
     unsigned int basic_unit_size;
     union
     {
@@ -1116,6 +1130,7 @@ typedef struct _VAEncMiscParameterAIR
 typedef struct _VAEncMiscParameterHRD
 {
     unsigned int initial_buffer_fullness;       /* in bits */
+    unsigned int optimal_buffer_fullness;       /* in bits */    
     unsigned int buffer_size;                   /* in bits */
 } VAEncMiscParameterHRD;
 
@@ -1134,6 +1149,22 @@ typedef struct _VAEncMiscParameterBufferMaxFrameSize {
     /** \brief Maximum size of a frame (in bits). */
     unsigned int                max_frame_size;
 } VAEncMiscParameterBufferMaxFrameSize;
+
+/**
+ * \brief Encoding quality level.
+ *
+ * The encoding quality could be set through this structure, if the implementation  
+ * supports multiple quality levels. The quality level set through this structure is 
+ * persistent over the entire coded sequence, or until a new structure is being sent.
+ * The quality level range can be queried through the VAConfigAttribEncQualityRange 
+ * attribute. A lower value means higher quality, and a value of 1 represents the highest 
+ * quality. The quality level setting is used as a trade-off between quality and speed/power 
+ * consumption, with higher quality corresponds to lower speed and higher power consumption. 
+ */
+typedef struct _VAEncMiscParameterBufferQualityLevel {
+    /** \brief Encoding quality level setting. */
+    unsigned int                quality_level;
+} VAEncMiscParameterBufferQualityLevel;
 
 /* 
  * There will be cases where the bitstream buffer will not have enough room to hold
@@ -1328,6 +1359,8 @@ typedef struct _VAPictureParameterBufferMPEG4
     /* for direct mode prediction */
     short TRB;
     short TRD;
+    unsigned int Tframe;
+    unsigned char vop_quant;
 } VAPictureParameterBufferMPEG4;
 
 /* MPEG-4 Inverse Quantization Matrix Buffer */
@@ -1838,6 +1871,7 @@ VAStatus vaBufferSetNumElements (
     unsigned int num_elements /* in */
 );
 
+
 /*
  * device independent data structure for codedbuffer
  */
@@ -2234,10 +2268,10 @@ typedef struct _VAImage
     unsigned short	width; 
     unsigned short	height;
     unsigned int	data_size;
-    unsigned int	num_planes;	/* can not be greater than 4 */
+    unsigned int	num_planes;	/* can not be greater than 3 */
     /* 
      * An array indicating the scanline pitch in bytes for each plane.
-     * Each plane may have a different pitch. Maximum 4 planes for planar formats
+     * Each plane may have a different pitch. Maximum 3 planes for planar formats
      */
     unsigned int	pitches[3];
     /* 
