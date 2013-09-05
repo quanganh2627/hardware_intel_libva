@@ -1085,11 +1085,11 @@ typedef struct _VAEncMiscParameterRateControl
      * then the rate control will guarantee the target bit-rate over a 500 ms window
      */
     unsigned int window_size;
-    /* initial QP at I frames */
-    unsigned int initial_qp;
-    /* min_qp/max_qp of encode frames
-     * If set them to 0, encode will choose the best QP according to rate control
+    /* initial_qp: initial QP for the first I frames
+     * min_qp/max_qp: minimal and maximum QP frames
+     * If set them to 0, encoder chooses the best QP according to rate control
      */
+    unsigned int initial_qp;
     unsigned int min_qp;
     unsigned int max_qp;
     unsigned int basic_unit_size;
@@ -1129,8 +1129,20 @@ typedef struct _VAEncMiscParameterAIR
 
 typedef struct _VAEncMiscParameterHRD
 {
+   /**
+    * \brief This value indicates the amount of data that will
+    * be buffered by the decoding application prior to beginning playback
+    */
     unsigned int initial_buffer_fullness;       /* in bits */
-    unsigned int optimal_buffer_fullness;       /* in bits */    
+   /**
+    * \brief This value indicates the amount of data that the
+    * encoder should try to maintain in the decoder's buffer
+    */
+    unsigned int optimal_buffer_fullness;       /* in bits */
+    /**
+     * \brief This value indicates the amount of data that
+     * may be buffered by the decoding application
+     */
     unsigned int buffer_size;                   /* in bits */
 } VAEncMiscParameterHRD;
 
@@ -1186,6 +1198,8 @@ typedef struct _VASliceParameterBufferBase
     unsigned int slice_data_offset;	/* the offset to the first byte of slice data */
     unsigned int slice_data_flag;	/* see VA_SLICE_DATA_FLAG_XXX definitions */
 } VASliceParameterBufferBase;
+
+#include <va/va_dec_jpeg.h>
 
 /****************************
  * MPEG-2 data structures
@@ -2215,6 +2229,8 @@ VAStatus vaQuerySurfaceError(
 #define VA_FOURCC_BGRX		0x58524742
 #define VA_FOURCC_ARGB		0x42475241
 #define VA_FOURCC_XRGB		0x42475258
+#define VA_FOURCC_ABGR          0x52474241
+#define VA_FOURCC_XBGR          0x52474258
 #define VA_FOURCC_UYVY          0x59565955
 #define VA_FOURCC_YUY2          0x32595559
 #define VA_FOURCC_AYUV          0x56555941
@@ -2268,7 +2284,7 @@ typedef struct _VAImage
     unsigned short	width; 
     unsigned short	height;
     unsigned int	data_size;
-    unsigned int	num_planes;	/* can not be greater than 3 */
+    unsigned int	num_planes;	/* can not be greater than 4 */
     /* 
      * An array indicating the scanline pitch in bytes for each plane.
      * Each plane may have a different pitch. Maximum 3 planes for planar formats
@@ -2294,6 +2310,7 @@ typedef struct _VAImage
     char component_order[4];
     /*
      * Pitch and byte offset for the fourth plane if the image format requires 4 planes
+     * Particular use case is JPEG with CMYK profile
      */
     unsigned int extra_pitch;
     unsigned int extra_offset;
