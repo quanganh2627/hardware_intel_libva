@@ -118,24 +118,25 @@ typedef struct  _VAEncPictureParameterBufferVP8
     /* buffer to store coded data */
     VABufferID coded_buf;
 
-     union {
+    union {
         struct {
             /* force this frame to be a keyframe */
             unsigned int force_kf                       : 1;
-	        /* don't reference the last frame */
+            /* don't reference the last frame */
             unsigned int no_ref_last                    : 1;
-	        /* don't reference the golden frame */
+            /* don't reference the golden frame */
             unsigned int no_ref_gf                      : 1;
-	        /* don't reference the alternate reference frame */
+            /* don't reference the alternate reference frame */
             unsigned int no_ref_arf                     : 1;
             unsigned int reserved                       : 28;
-               } bits;
+        } bits;
         unsigned int value;
     } ref_flags;
 
     union {
         struct {
             /* version */
+            unsigned int frame_type                     : 1;
             unsigned int version                        : 3;
             /* show_frame */
             unsigned int show_frame                     : 1;
@@ -229,7 +230,7 @@ typedef struct  _VAEncPictureParameterBufferVP8
 	     * Encoder application is advised to set this flag to 1 at key frames.
 	     */
             unsigned int forced_lf_adjustment           : 1;
-	    unsigned int reserved                       : 3;
+            unsigned int reserved                       : 2;
         } bits;
         unsigned int value;
     } pic_flags;
