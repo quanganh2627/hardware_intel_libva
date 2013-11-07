@@ -220,6 +220,14 @@ typedef int VAStatus;	/* Return status type from functions */
  */
 const char *vaErrorStr(VAStatus error_status);
 
+typedef struct _VARectangle
+{
+    short x;
+    short y;
+    unsigned short width;
+    unsigned short height;
+} VARectangle;
+
 /*
  * Initialization:
  * A display must be obtained by calling vaGetDisplay() before calling
@@ -307,6 +315,15 @@ typedef enum
     VAEntrypointDeblocking	= 5,
     VAEntrypointEncSlice	= 6,	/* slice level encode */
     VAEntrypointEncPicture 	= 7,	/* pictuer encode, JPEG, etc */
+    /*
+     * For an implementation that supports a low power/high performance variant
+     * for slice level encode, it can choose to expose the 
+     * VAEntrypointEncSliceLP entrypoint. Certain encoding tools may not be 
+     * available with this entrypoint (e.g. interlace, MBAFF) and the 
+     * application can query the encoding configuration attributes to find 
+     * out more details if this entrypoint is supported.
+     */
+    VAEntrypointEncSliceLP 	= 8,
     VAEntrypointVideoProc       = 10,   /**< Video pre/post-processing. */
     VAEntrypointMax
 } VAEntrypoint;
@@ -464,6 +481,25 @@ typedef enum
      * for encoding (e.g. adaptive intra refresh or rolling intra refresh). 
      */
     VAConfigAttribEncIntraRefresh     = 23,
+    /**
+     * \brief Encoding skip frame attribute. Read-only.
+     *
+     * This attribute conveys whether the driver supports sending skip frame parameters 
+     * (VAEncMiscParameterTypeSkipFrame) to the encoder's rate control, when the user has 
+     * externally skipped frames. 
+     */
+    VAConfigAttribEncSkipFrame        = 24,
+    /**
+     * \brief Encoding region-of-interest (ROI) attribute. Read-only.
+     *
+     * This attribute conveys whether the driver supports region-of-interest (ROI) encoding,
+     * based on user provided ROI rectangles.  The attribute value returned indicates the number
+     * of regions that are supported.  e.g. A value of 0 means ROI encoding is not supported.
+     * If ROI encoding is supported, the ROI information is passed to the driver using
+     * VAEncMiscParameterTypeRoi.
+     */
+    VAConfigAttribEncRoi              = 25,
+
     /**@}*/
     VAConfigAttribTypeMax
 } VAConfigAttribType;
@@ -505,7 +541,12 @@ typedef struct _VAConfigAttrib {
 #define VA_RC_CQP                       0x00000010
 /** \brief Variable bitrate with peak rate higher than average bitrate. */
 #define VA_RC_VBR_CONSTRAINED           0x00000020
+/** \brief Constant rate factor. */
 #define VA_RC_CRF			0x00000040
+/** \brief Macroblock based rate control.  Per MB control is decided 
+ *  internally in the encoder. It may be combined with other RC modes, except CQP. */
+#define VA_RC_MB                        0x00000080
+
 /**@}*/
 
 /** @name Attribute values for VAConfigAttribDecSliceMode */
@@ -789,6 +830,9 @@ typedef enum {
     VASurfaceAttribMemoryType,
     /** \brief External buffer descriptor (pointer, write). */
     VASurfaceAttribExternalBufferDescriptor,
+    /** \brief Surface usage hint, gives the driver a hint of intended usage 
+     *  to optimize allocation (e.g. tiling) (int, read/write). */
+    VASurfaceAttribUsageHint,
     /** \brief Number of surface attributes. */
     VASurfaceAttribCount
 } VASurfaceAttribType;
@@ -859,6 +903,21 @@ typedef struct _VASurfaceAttribExternalBuffers {
 #define VA_SURFACE_EXTBUF_DESC_WC		0x00000008
 /** \brief Memory is protected */
 #define VA_SURFACE_EXTBUF_DESC_PROTECTED        0x80000000
+
+/** @name VASurfaceAttribUsageHint attribute usage hint flags */
+/**@{*/
+/** \brief Surface usage not indicated. */
+#define VA_SURFACE_ATTRIB_USAGE_HINT_GENERIC 	0x00000000
+/** \brief Surface used by video decoder. */
+#define VA_SURFACE_ATTRIB_USAGE_HINT_DECODER 	0x00000001
+/** \brief Surface used by video encoder. */
+#define VA_SURFACE_ATTRIB_USAGE_HINT_ENCODER 	0x00000002
+/** \brief Surface read by video post-processing. */
+#define VA_SURFACE_ATTRIB_USAGE_HINT_VPP_READ 	0x00000004
+/** \brief Surface written by video post-processing. */
+#define VA_SURFACE_ATTRIB_USAGE_HINT_VPP_WRITE 	0x00000008
+/** \brief Surface used for display. */
+#define VA_SURFACE_ATTRIB_USAGE_HINT_DISPLAY 	0x00000010
 
 /**@}*/
 
@@ -1051,6 +1110,11 @@ typedef enum
     VAEncMiscParameterTypeQualityLevel  = 6,
     VAEncMiscParameterTypeRIR           = 7,
     VAEncMiscParameterTypeQuantization  = 8,
+    /** \brief Buffer type used for sending skip frame parameters to the encoder's
+      * rate control, when the user has externally skipped frames. */
+    VAEncMiscParameterTypeSkipFrame     = 9,
+    /** \brief Buffer type used for region-of-interest (ROI) parameters. */
+    VAEncMiscParameterTypeROI           = 10
 } VAEncMiscParameterType;
 
 /** \brief Packed header type. */
@@ -1137,6 +1201,7 @@ typedef struct _VAEncMiscParameterRateControl
             unsigned int reset : 1;
             unsigned int disable_frame_skip : 1; /* Disable frame skip in rate control mode */
             unsigned int disable_bit_stuffing : 1; /* Disable bit stuffing in rate control mode */
+            unsigned int mb_rate_control : 4; /* Control VA_RC_MB 0: default, 1: enable, 2: disable, other: reserved*/
         } bits;
         unsigned int value;
     } rc_flags;
@@ -1287,6 +1352,64 @@ typedef struct _VAEncMiscParameterQuantization
         unsigned int value;
     } quantization_flags;
 } VAEncMiscParameterQuantization;
+
+/**
+ * \brief Encoding skip frame.
+ *
+ * The application may choose to skip frames externally to the encoder (e.g. drop completely or 
+ * code as all skip's). For rate control purposes the encoder will need to know the size and number 
+ * of skipped frames.  Skip frame(s) indicated through this structure is applicable only to the 
+ * current frame.  It is allowed for the application to still send in packed headers for the driver to 
+ * pack, although no frame will be encoded (e.g. for HW to encrypt the frame).  
+ */
+typedef struct _VAEncMiscParameterSkipFrame {
+    /** \brief Indicates skip frames as below.
+      * 0: Encode as normal, no skip.
+      * 1: One or more frames were skipped prior to the current frame, encode the current frame as normal.  
+      * 2: The current frame is to be skipped, do not encode it but pack/encrypt the packed header contents
+      *    (all except VAEncPackedHeaderSlice) which could contain actual frame contents (e.g. pack the frame 
+      *    in VAEncPackedHeaderPicture).  */
+    unsigned char               skip_frame_flag;
+    /** \brief The number of frames skipped prior to the current frame.  Valid when skip_frame_flag = 1. */
+    unsigned char               num_skip_frames;
+    /** \brief When skip_frame_flag = 1, the size of the skipped frames in bits.   When skip_frame_flag = 2, 
+      * the size of the current skipped frame that is to be packed/encrypted in bits. */
+    unsigned int                size_skip_frames;
+} VAEncMiscParameterSkipFrame;
+
+/**
+ * \brief Encoding region-of-interest (ROI).
+ *
+ * The encoding ROI can be set through this structure, if the implementation
+ * supports ROI input. The ROI set through this structure is applicable only to the
+ * current frame.  The number of supported ROIs can be queried through the
+ * VAConfigAttribEncRoi.  The encoder will use the ROI information to adjust the QP
+ * values of the MB's that fall within the ROIs.
+ */
+typedef struct _VAEncMiscParameterBufferRoi {
+    /** \brief Number of ROIs being sent.*/
+    unsigned int                num_roi;
+    /** \brief Valid when VAConfigAttribRateControl != VA_RC_CQP, then the encoder's
+     *  rate control will determine actual delta QPs.  Specifies the max/min allowed delta QPs.*/
+    char                        max_delta_qp;
+    char                        min_delta_qp;
+
+    /** \brief Pointer to a VAEncROI array with num_ROI elements.*/
+    struct VAEncROI
+    {
+        /** \brief Defines the ROI boundary in pixels, the driver will map it to appropriate
+         *  codec coding units.  It is relative to the frame coordinates for both frame and field cases. */
+        VARectangle             roi_rectangle;
+        /** \brief When VAConfigAttribRateControl == VA_RC_CQP then roi_value specifes the delta QP that
+         *  will be added on top of the frame level QP.  For other rate control modes, roi_value specifies the
+         *  priority of the ROI region relative to the non-ROI region.  It can positive (more important) or
+         *  negative (less important) values and is compared with non-ROI region (taken as value 0).
+         *  E.g. ROI region with roi_value -3 is less important than the non-ROI region (roi_value implied to be 0)
+         *  which is less important than ROI region with roi_value +2.  For overlapping regions, the roi_value
+         *  that is first in the ROI array will have priority.   */
+        char                    roi_value;
+    } *ROI;
+} VAEncMiscParameterBufferROI;
 
 /* 
  * There will be cases where the bitstream buffer will not have enough room to hold
@@ -2676,14 +2799,6 @@ VAStatus vaDeassociateSubpicture (
     VASurfaceID *target_surfaces,
     int num_surfaces
 );
-
-typedef struct _VARectangle
-{
-    short x;
-    short y;
-    unsigned short width;
-    unsigned short height;
-} VARectangle;
 
 /*
  * Display attributes
