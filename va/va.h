@@ -634,6 +634,9 @@ typedef union _VAConfigAttribValEncJPEG {
 #define VA_ENC_INTRA_REFRESH_ROLLING_ROW                0x00000002
 /** \brief Driver supports adaptive intra refresh */
 #define VA_ENC_INTRA_REFRESH_ADAPTIVE                   0x00000010
+/** \brief Driver supports cyclic intra refresh */
+#define VA_ENC_INTRA_REFRESH_CYCLIC                     0x00000020
+
 /**@}*/
 
 /*
@@ -1102,19 +1105,23 @@ typedef enum
     VAEncMiscParameterTypeFrameRate 	= 0,
     VAEncMiscParameterTypeRateControl  	= 1,
     VAEncMiscParameterTypeMaxSliceSize	= 2,
+    /** \brief Buffer type used for Adaptive intra refresh */
     VAEncMiscParameterTypeAIR    	= 3,
     /** \brief Buffer type used to express a maximum frame size (in bits). */
     VAEncMiscParameterTypeMaxFrameSize  = 4,
     /** \brief Buffer type used for HRD parameters. */
     VAEncMiscParameterTypeHRD           = 5,
     VAEncMiscParameterTypeQualityLevel  = 6,
+    /** \brief Buffer type used for Rolling intra refresh */
     VAEncMiscParameterTypeRIR           = 7,
     VAEncMiscParameterTypeQuantization  = 8,
     /** \brief Buffer type used for sending skip frame parameters to the encoder's
       * rate control, when the user has externally skipped frames. */
     VAEncMiscParameterTypeSkipFrame     = 9,
     /** \brief Buffer type used for region-of-interest (ROI) parameters. */
-    VAEncMiscParameterTypeROI           = 10
+    VAEncMiscParameterTypeROI           = 10,
+    /** \brief Buffer type used for Cyclic intra refresh */
+    VAEncMiscParameterTypeCIR           = 11
 } VAEncMiscParameterType;
 
 /** \brief Packed header type. */
@@ -1223,11 +1230,33 @@ typedef struct _VAEncMiscParameterMaxSliceSize
     unsigned int max_slice_size;
 } VAEncMiscParameterMaxSliceSize;
 
+/*
+ * \brief Cyclic intra refresh data structure for encoding.
+ */
+typedef struct _VAEncMiscParameterCIR
+{
+    /** \brief  the number of consecutive macroblocks to be coded as intra */
+    unsigned int cir_num_mbs;
+} VAEncMiscParameterCIR;
+
+/*
+ * \brief Adaptive intra refresh data structure for encoding.
+ */
 typedef struct _VAEncMiscParameterAIR
 {
+    /** \brief the minimum number of macroblocks to refresh in a frame */
     unsigned int air_num_mbs;
+    /**
+     * \brief threshhold of motion estimation block-matching criterion (typically SAD)
+     *
+     * Macroblocks above that threshold are marked as candidates and
+     * on subsequent frames a number of these candidates are coded as Intra.
+     * Generally the threshhold need to be set and tuned to an appropriate level
+     * according to the feedback of coded frame.
+     */
     unsigned int air_threshold;
-    unsigned int air_auto; /* if set to 1 then hardware auto-tune the AIR threshold */
+    /** \brief if set to 1 then hardware auto-tune the AIR threshold */
+    unsigned int air_auto;
 } VAEncMiscParameterAIR;
 
 /*
